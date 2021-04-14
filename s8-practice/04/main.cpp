@@ -16,5 +16,5 @@ int main() {
 	printf("b = ");
 	scanf("%d", &b);
 
-	printf("gcd = %d\n", gcd(max(a, b), min(a, b)));
+	printf("gcd = %d\n", gcd(a, b));
 }
