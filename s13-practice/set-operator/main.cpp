@@ -79,7 +79,7 @@ int main() {
 	Set d = a.minus(b);
 	d.print();
 
-	bool ok = a.in(b);
+	bool ok = b.in(a);
 	printf("%d\n", ok);
 
 	return 0;
