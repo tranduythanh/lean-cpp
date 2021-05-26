@@ -62,7 +62,7 @@ struct studentList {
 	studentList filterByFamily(int f) {
 		studentList l;
 		for (int i = 0; i < size; i++)
-			if (arr[i].family == 0)
+			if (arr[i].family == f)
 				l.add(arr[i]);
 		return l;
 	}
