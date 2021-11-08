@@ -104,23 +104,14 @@ void divideToConquer(int x[], int y[], int n, int start, int end)
     int rightStart = leftEnd;
     int rightEnd = end;
 
-    cout << "split\t\t" << leftStart << "\t" << leftEnd << "\t" << rightStart << "\t" << rightEnd << endl;
-
-    cout << "check left\t" << leftStart << "\t" << leftEnd << endl;
     //  conquer left part
-    if (leftEnd-leftStart > 1){
-        cout << "conquer left\t" << leftStart << "\t" << leftEnd << endl;
+    if (leftEnd-leftStart > 1)
         divideToConquer(x, y, n, leftStart, leftEnd);
-    }
 
-    cout << "check right\t" << rightStart << "\t" << rightEnd << endl;
     //  conquer right part
-    if (rightEnd - rightStart > 1) {
-        cout << "conquer right\t" << rightStart << "\t" << rightEnd << endl;
+    if (rightEnd - rightStart > 1)
         divideToConquer(x, y, n, rightStart, rightEnd);
-    }
 
-    cout << "sort\t\t" << start << "\t" << end << endl;
     copyTo(x, y, start, end);
     sortXFromY(x, y, n, start, end);
 }
