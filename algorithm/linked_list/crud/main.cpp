@@ -16,6 +16,11 @@ typedef struct {
     PNode Tail;
 } LinkedList;
 
+typedef struct {
+    PNode Pre;
+    PNode Cur;
+} Position;
+
 void PrintLinkedList(LinkedList list)
 {
     if (list.Head == NULL || list.Tail == NULL)
@@ -69,42 +74,53 @@ void AddNodeAfterNode(LinkedList* list, PNode pn, PNode newNode)
         list->Tail = newNode;
 }
 
-void DeleteNode(LinkedList* list, int data)
+Position FindNode(LinkedList list, int data)
 {
-    if (list->Head == NULL)
-        return;
-    
-    if (list->Head == list->Tail)
-        if (list->Head->Data == data)
-        {
-            *list = (LinkedList) { NULL, NULL };
-            return;
-        }
+    Position pos = (Position){NULL, NULL};
+    if (list.Head == NULL)
+        return pos;
 
-
-    PNode pre = NULL;
-    PNode cur = list->Head;
-
-    // Check case node deleted is the head
-    if (cur->Data == data)
-    {
-        list->Head = cur->Next;
-        delete cur;
-        return;
-    }
+    PNode cur = list.Head;
 
     // search
-    while (cur->Data != data)
+    while (cur != NULL && cur->Data != data)
     {
-        pre = cur;
+        pos.Pre = cur;
         cur = cur->Next;
-
-        if (cur == NULL)
-            return; // node not exist, just return
     }
+    if (cur != NULL)
+        pos.Cur = cur;
+    return pos;
+}
+
+void DeleteNode(LinkedList* list, int data)
+{
+    Position pos = FindNode(*list, data);
+    cout << pos.Pre << " " << pos.Cur << endl;
+    if (pos.Cur == NULL)
+        return;
+    
+    if (pos.Pre == NULL)
+    {
+        if (pos.Cur == list->Tail)
+        {
+            *list = (LinkedList){NULL, NULL};
+            delete pos.Cur;
+            return;
+        }
+        if (pos.Cur->Data == data)
+        {
+            list->Head = pos.Cur->Next;
+            delete pos.Cur;
+            return;
+        }
+    }
+
     // delete
-    pre->Next = cur->Next;
-    delete cur;
+    pos.Pre->Next = pos.Cur->Next;
+    if (pos.Cur == list->Tail)
+        list->Tail = pos.Pre;
+    delete pos.Cur;
 }
 
 int main()
