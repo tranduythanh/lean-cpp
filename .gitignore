@@ -1,3 +1,4 @@
 .vscode
 **/**/a
 **/**/main
+.DS_Store
