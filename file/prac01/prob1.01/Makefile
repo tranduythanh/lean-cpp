@@ -1,4 +1,4 @@
 run:
 	rm -rf a
-	g++ -Wall -o a *cpp
+	g++ -I../../include -Wall -o a *cpp
 	./a
