@@ -342,7 +342,8 @@ int main () {
     tree->Insert(8);
     tree->Draw();
     tree->Insert(32);
-    // tree->Insert(38);
+    tree->Draw();
+    tree->Insert(38);
     // tree->Insert(24);
     // tree->Insert(45);
     // tree->Insert(25);
