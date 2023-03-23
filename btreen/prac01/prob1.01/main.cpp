@@ -156,32 +156,63 @@ void Page::migrateNonRootPage(Page* left, Item* middleItem, Page* right) {
     cout << "right "; right->DebugItems();
 
     this->Parent->SearchToAssignPage(left);
+
+    this->Parent->CheckToBreak();
 }
 void Page::Break() {
-    Page* pageLeft = new Page(this->Order, 0, this);
-    Page* pageRight = new Page(this->Order, 0, this);
-    pageLeft->Elems.assign(
+    Page* left = new Page(this->Order, 0, this);
+    Page* right = new Page(this->Order, 0, this);
+    left->Elems.assign(
         this->Elems.begin(), 
         this->Elems.begin()+this->Order
     );
-    pageRight->Elems.assign(
+    right->Elems.assign(
         this->Elems.end()-this->Order,
         this->Elems.end()
     );
+
     Item* middleItem = this->Elems.at(this->Order);
+
+    // Inheritance ========================
+    // "left" must be inherit the LeftPage of original page
+    left->LeftPage = this->LeftPage;
+
+    //    [ 10    20      25      30     40 ]
+    //     |  |     |       |       |      |
+    // [...]  [...] [...] [26,27] [...]  [...]
+    // 
+    //                 25
+    //                |   |  |
+    //    [ 10    20 ]    |  [30    40]
+    //     |  |     |     |
+    // [...]  [...] [...] [26,27] 
+    // 
+    //                 25
+    //                |   |
+    //    [ 10    20 ]    [ 30    40]
+    //     |  |     |      |
+    // [...]  [...] [...]  [26,27] 
+    // delegate the middle item's right page to the left of new right-page
+    right->LeftPage = middleItem->RightPage;
+    // new RightPage of middle item will be the "right"
+    middleItem->RightPage = right;
+    // ====================================
+    
+
     if (this->Parent == NULL) {
         cout << "migrate root" << endl;
-        this->migrateRootPage(pageLeft, middleItem, pageRight);
+        this->migrateRootPage(left, middleItem, right);
         return;
     }
+
     cout << "migrate non root" << endl;
     cout << "left" << endl;
-    pageLeft->Draw(0);
+    left->Draw(0);
     cout << "middle" << endl;
     middleItem->Draw(0);
     cout << "right" << endl;
-    pageRight->Draw(0);
-    this->migrateNonRootPage(pageLeft, middleItem, pageRight);
+    right->Draw(0);
+    this->migrateNonRootPage(left, middleItem, right);
 }
 void Page::CheckToBreak() {
     if (this->Elems.size() > 2*this->Order) {
@@ -197,7 +228,10 @@ Item* Page::SearchToInsert(int data) {
             // continue searching on the leff branch
             return this->LeftPage->SearchToInsert(data);
         }
-        return this->Insert(newItem);
+        
+        Item* _item = this->Insert(newItem);
+        this->CheckToBreak();
+        return _item;
     }
     // Check on every item
     for (int i=0; i<this->Elems.size(); i++) {
@@ -220,7 +254,9 @@ Item* Page::SearchToInsert(int data) {
         }
 
         // Insert to this page
-        return this->Insert(newItem);
+        Item* _item = this->Insert(newItem);
+        this->CheckToBreak();
+        return _item;
     }
     // if data is larger than all items
     // Continue searching on the right branch
@@ -229,7 +265,9 @@ Item* Page::SearchToInsert(int data) {
     }
     
     // Or insert to this page
-    return this->Insert(newItem);
+    Item* _item = this->Insert(newItem);
+    this->CheckToBreak();
+    return _item;
 }
 void Page::Draw(int level) {
     if (this->LeftPage!= NULL)
@@ -278,12 +316,10 @@ Item* Page::Insert(Item* newItem) {
         }
 
         this->Elems.insert(Elems.begin()+i, newItem);
-        this->CheckToBreak();
         return newItem;
     }
 
     this->Elems.push_back(newItem);
-    this->CheckToBreak();
     return newItem;
 };
 
@@ -344,8 +380,11 @@ int main () {
     tree->Insert(32);
     tree->Draw();
     tree->Insert(38);
-    // tree->Insert(24);
-    // tree->Insert(45);
-    // tree->Insert(25);
+    tree->Draw();
+    tree->Insert(24);
+    tree->Draw();
+    tree->Insert(45);
+    tree->Draw();
+    tree->Insert(25);
     tree->Draw();
 }
