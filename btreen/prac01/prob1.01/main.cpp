@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <cstdio>
+#include <cassert> 
 
 using namespace std;
 
@@ -26,11 +27,13 @@ public:
     int FirstData();
     int LastData();
     Item* Insert(Item* item);
-    void AssignPage(Page* page);
+    void SetRightPage(int elemIdx, Page* page);
+    void SearchToAssignPage(Page* page);
     void Break();
     void CheckToBreak();
     Item* SearchToInsert(int data);
     void Draw(int level);
+    void DebugItems();
 };
 
 
@@ -96,26 +99,63 @@ Page::~Page() {
 void Page::migrateRootPage(Page* left, Item* middleItem, Page* right) {
     this->Elems.clear();
     this->Elems.push_back(middleItem);
-    this->Elems.at(0)->RightPage = right;
+    
+    this->SetRightPage(0, right);
+    
     this->LeftPage = left;
+    left->Parent=this;
 }
-void Page::AssignPage(Page* page) {
+void Page::SetRightPage(int elemIdx, Page* page) {
+    this->Elems.at(elemIdx)->RightPage = page;
+    page->Parent = this;
+}
+void Page::SearchToAssignPage(Page* page) {
+    cout << "first data: " << this->FirstData() << endl;
+    cout << "last  data: " << page->LastData() << endl;
+
     if (page->LastData() < this->FirstData()) {
         this->LeftPage = page;
         return;
     }
-    for (int i=0; i<page->Elems.size(); i++) {
-        if (page->LastData() > this->Elems.at(i)->Data)
+
+    cout << "elems size: " << this->Elems.size() << endl;
+    for (int i=0; i<this->Elems.size(); i++) {
+        if (page->LastData() > this->Elems.at(i)->Data) {
+            cout << "** elem data: " << this->Elems.at(i)->Data << endl;
+            cout << "   last data: " << page->LastData() << endl;
+            cout << "continue" << endl;
             continue;
-        this->Elems.at(i-1)->RightPage = page;
+        }
+        
+        this->SetRightPage(i-1, page);
         return;
     }
-    this->Elems.back()->RightPage = page;
+    this->SetRightPage(this->Elems.size()-1, page);
 }
 void Page::migrateNonRootPage(Page* left, Item* middleItem, Page* right) {
+    assert(this->Parent != NULL);
+    assert(this->Elems.size() == 2*this->Order+1);
+
+    cout << "Draw relative Parent" << endl;
+    this->Parent->DebugItems();
+    cout << "====================" << endl;
+
     Item* parentItem = this->Parent->Insert(middleItem);
+    
+    assert(right->Elems.size() == 2);
+    assert(left->Elems.size() == 2);
+
+    
     parentItem->RightPage = right;
-    this->Parent->AssignPage(left);
+    right->Parent = this->Parent;
+
+    assert(right->Elems.size() == 2);
+    assert(left->Elems.size() == 2);
+
+    cout << "left  "; left->DebugItems();
+    cout << "right "; right->DebugItems();
+
+    this->Parent->SearchToAssignPage(left);
 }
 void Page::Break() {
     Page* pageLeft = new Page(this->Order, 0, this);
@@ -134,10 +174,18 @@ void Page::Break() {
         this->migrateRootPage(pageLeft, middleItem, pageRight);
         return;
     }
+    cout << "migrate non root" << endl;
+    cout << "left" << endl;
+    pageLeft->Draw(0);
+    cout << "middle" << endl;
+    middleItem->Draw(0);
+    cout << "right" << endl;
+    pageRight->Draw(0);
     this->migrateNonRootPage(pageLeft, middleItem, pageRight);
 }
 void Page::CheckToBreak() {
     if (this->Elems.size() > 2*this->Order) {
+        this->Draw(0);
         cout << "let's break" << endl;
         this->Break();
     }
@@ -206,6 +254,12 @@ void Page::Draw(int level) {
             this->Elems[i]->RightPage->Draw(level+1);
     }
 }
+void Page::DebugItems() {
+    for (int i=0; i<this->Elems.size(); i++) {
+        cout << this->Elems.at(i)->Data << ",";
+    }
+    cout << endl;
+}
 int Page::FirstData() {
     return this->Elems.at(0)->Data;
 }
@@ -255,30 +309,6 @@ void BTreeN::Draw() {
 }
 
 int main () {
-    // Page* page010 = new Page(2, 10); page010->Insert(20);
-    // Page* page040 = new Page(2, 40); page040->Insert(50);
-    // Page* page070 = new Page(2, 70); page070->Insert(80); page070->Insert(90);
-    // Page* page035 = new Page(2, 35); page035->Insert(65);
-    // page035->LeftPage = page010;
-    // page035->Elems.at(0)->RightPage = page040;
-    // page035->Elems.at(1)->RightPage = page070;
-
-    // Page* page110 = new Page(2, 110); page110->Insert(120);
-    // Page* page140 = new Page(2, 140); page140->Insert(160);
-    // Page* page190 = new Page(2, 190); page190->Insert(240); page190->Insert(260);
-    // Page* page130 = new Page(2, 130); page130->Insert(180);
-    // page130->LeftPage = page110;
-    // page130->Elems.at(0)->RightPage = page140;
-    // page130->Elems.at(1)->RightPage = page190;
-
-    // Page* page100 = new Page(2, 100);
-    // page100->LeftPage = page035;
-    // page100->Elems.at(0)->RightPage = page130;
-    
-    // page100->Draw(0);
-
-    
-
     BTreeN* tree = new BTreeN(2, 20);
     tree->Draw();
     tree->Insert(40);
