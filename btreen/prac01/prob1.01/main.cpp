@@ -28,6 +28,7 @@ public:
     int LastData();
     Item* Insert(Item* item);
     void SetRightPage(int elemIdx, Page* page);
+    void SetLeftPage(Page* page);
     void SearchToAssignPage(Page* page);
     void Break();
     void CheckToBreak();
@@ -78,6 +79,7 @@ void Item::Draw(int level) {
     for (int i=0; i<level; i++)
         cout << "\t";
     cout << this->Data << endl;
+    // cout << this->Data << "\x1B[31m[" << this << "]\033[0m" << endl;
 }
 
 
@@ -99,14 +101,15 @@ Page::~Page() {
 void Page::migrateRootPage(Page* left, Item* middleItem, Page* right) {
     this->Elems.clear();
     this->Elems.push_back(middleItem);
-    
     this->SetRightPage(0, right);
-    
-    this->LeftPage = left;
-    left->Parent=this;
+    this->SetLeftPage(left);
 }
 void Page::SetRightPage(int elemIdx, Page* page) {
     this->Elems.at(elemIdx)->RightPage = page;
+    page->Parent = this;
+}
+void Page::SetLeftPage(Page* page) {
+    this->LeftPage = page;
     page->Parent = this;
 }
 void Page::SearchToAssignPage(Page* page) {
@@ -114,7 +117,7 @@ void Page::SearchToAssignPage(Page* page) {
     cout << "last  data: " << page->LastData() << endl;
 
     if (page->LastData() < this->FirstData()) {
-        this->LeftPage = page;
+        this->SetLeftPage(page);
         return;
     }
 
@@ -140,11 +143,20 @@ void Page::migrateNonRootPage(Page* left, Item* middleItem, Page* right) {
     this->Parent->DebugItems();
     cout << "====================" << endl;
 
+    cout << "\n\n====================" << endl;
+    cout << "middle_item.data              : " << middleItem->Data << endl;
+    cout << "middle_item.right_page.elem[0]: " << middleItem->RightPage->Elems.at(0)->Data << endl;
+    cout << "middle_item.right_page.parent : " << middleItem->RightPage->Parent->FirstData() << endl;
+
     Item* parentItem = this->Parent->Insert(middleItem);
     
     assert(right->Elems.size() == 2);
     assert(left->Elems.size() == 2);
 
+    cout << "parent_item.data              : " << parentItem->Data << endl;
+    cout << "parent_item.right_page.elem[0]: " << parentItem->RightPage->Elems.at(0)->Data << endl;
+    cout << "parent_item.right_page.parent : " << parentItem->RightPage->Parent->FirstData() << endl;
+    cout << "====================\n\n" << endl;
     
     parentItem->RightPage = right;
     right->Parent = this->Parent;
@@ -171,11 +183,26 @@ void Page::Break() {
         this->Elems.end()
     );
 
+    for (int i=0; i<left->Elems.size(); i++) {
+        if (left->Elems.at(i)->RightPage != NULL) {
+            left->Elems.at(i)->RightPage->Parent = left;
+        }
+    }
+
+    for (int i=0; i<right->Elems.size(); i++) {
+        if (right->Elems.at(i)->RightPage != NULL) {
+            right->Elems.at(i)->RightPage->Parent = right;
+        }
+    }
+
     Item* middleItem = this->Elems.at(this->Order);
 
     // Inheritance ========================
     // "left" must be inherit the LeftPage of original page
     left->LeftPage = this->LeftPage;
+    if (left->LeftPage!= NULL) {
+        left->LeftPage->Parent = left;
+    }
 
     //    [ 10    20      25      30     40 ]
     //     |  |     |       |       |      |
@@ -194,6 +221,9 @@ void Page::Break() {
     // [...]  [...] [...]  [26,27] 
     // delegate the middle item's right page to the left of new right-page
     right->LeftPage = middleItem->RightPage;
+    if (right->LeftPage!= NULL) {
+        right->LeftPage->Parent = right;
+    }
     // new RightPage of middle item will be the "right"
     middleItem->RightPage = right;
     // ====================================
@@ -212,6 +242,13 @@ void Page::Break() {
     middleItem->Draw(0);
     cout << "right" << endl;
     right->Draw(0);
+    
+    cout << endl;
+    cout << "middle_item.data              : " << middleItem->Data << endl;
+    cout << "middle_item.right_page.elem[0]: " << middleItem->RightPage->Elems.at(0)->Data << endl;
+    cout << "middle_item.right_page.parent : " << middleItem->RightPage->Parent->FirstData() << endl;
+    cout << endl;
+    
     this->migrateNonRootPage(left, middleItem, right);
 }
 void Page::CheckToBreak() {
@@ -276,7 +313,7 @@ void Page::Draw(int level) {
     // print "--" at the begin of each level
     for (int i=0; i<level+1; i++)
         cout << "\t";
-    cout << "--" << endl;
+    cout << "-- " << "\x1b[32m" << this->Parent << "\033[0m" << ";" << this << endl;
 
     for (int i=0; i<this->Elems.size(); i++) {
         this->Elems[i]->Draw(level+1);
@@ -345,46 +382,87 @@ void BTreeN::Draw() {
 }
 
 int main () {
+    
+    printf("\n");
+    printf("\x1B[31mTexting\033[0m\t\t");
+    printf("\x1B[32mTexting\033[0m\t\t");
+    printf("\x1B[33mTexting\033[0m\t\t");
+    printf("\x1B[34mTexting\033[0m\t\t");
+    printf("\x1B[35mTexting\033[0m\n");
+    
+    printf("\x1B[36mTexting\033[0m\t\t");
+    printf("\x1B[36mTexting\033[0m\t\t");
+    printf("\x1B[36mTexting\033[0m\t\t");
+    printf("\x1B[37mTexting\033[0m\t\t");
+    printf("\x1B[93mTexting\033[0m\n");
+    
+    printf("\033[3;42;30mTexting\033[0m\t\t");
+    printf("\033[3;43;30mTexting\033[0m\t\t");
+    printf("\033[3;44;30mTexting\033[0m\t\t");
+    printf("\033[3;104;30mTexting\033[0m\t\t");
+    printf("\033[3;100;30mTexting\033[0m\n");
+
+    printf("\033[3;47;35mTexting\033[0m\t\t");
+    printf("\033[2;47;35mTexting\033[0m\t\t");
+    printf("\033[1;47;35mTexting\033[0m\t\t");
+    printf("\t\t");
+    printf("\n");
+
+
     BTreeN* tree = new BTreeN(2, 20);
-    tree->Draw();
     tree->Insert(40);
-    tree->Draw();
     tree->Insert(10);
-    tree->Draw();
     tree->Insert(30);
-    tree->Draw();
     tree->Insert(15);
-    tree->Draw();
     tree->Insert(35);
-    tree->Draw();
     tree->Insert(7);
-    tree->Draw();
     tree->Insert(26);
-    tree->Draw();
     tree->Insert(18);
-    tree->Draw();
     tree->Insert(22);
-    tree->Draw();
     tree->Insert(5);
-    tree->Draw();
     tree->Insert(42);
-    tree->Draw();
     tree->Insert(13);
-    tree->Draw();
     tree->Insert(46);
-    tree->Draw();
     tree->Insert(27);
-    tree->Draw();
     tree->Insert(8);
-    tree->Draw();
     tree->Insert(32);
-    tree->Draw();
     tree->Insert(38);
-    tree->Draw();
     tree->Insert(24);
-    tree->Draw();
     tree->Insert(45);
     tree->Draw();
     tree->Insert(25);
+    tree->Insert(21);
+    tree->Insert(28);
+    tree->Insert(29);
+    tree->Insert(31);
+    tree->Insert(23);
+    tree->Insert(6);
+    tree->Insert(12);
+    tree->Insert(41);
+    
+    // tree->Draw();
+    
+    // cout << endl;
+    // cout << endl;
+    // cout << endl;
+    // cout << "============================================================" << endl;
+    // cout << "============================================================" << endl;
+    // cout << "============================================================" << endl;
+    tree->Insert(4);
     tree->Draw();
+    // tree->Insert(33);
+    // tree->Draw();
+    // tree->Insert(34);
+    // tree->Draw();
+    // tree->Insert(36);
+    // tree->Draw();
+    // tree->Insert(37);
+    // tree->Draw();
+    
+    // Page* p = new Page(2, 20, NULL);
+    // Item* newItem1 = p->Insert(new Item(30, NULL));
+    // Item* newItem2 = p->Insert(new Item(10, NULL));
+    // p->Draw(0);
+    // cout << newItem1->Data << "should be 30" << endl;
+    // cout << newItem2->Data << "should be 10" << endl;
 }
