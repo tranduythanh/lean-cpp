@@ -252,9 +252,11 @@ void Page::Break() {
     this->migrateNonRootPage(left, middleItem, right);
 }
 void Page::CheckToBreak() {
+    cout << "######### check to break" << endl;
+    this->DebugItems();
     if (this->Elems.size() > 2*this->Order) {
         this->Draw(0);
-        cout << "let's break" << endl;
+        cout << "######### let's break" << endl;
         this->Break();
     }
 }
@@ -444,25 +446,14 @@ int main () {
     tree->Insert(6);
     tree->Insert(12);
     tree->Insert(41);
-    
-    // tree->Draw();
-    
-    // cout << endl;
-    // cout << endl;
-    // cout << endl;
-    // cout << "============================================================" << endl;
-    // cout << "============================================================" << endl;
-    // cout << "============================================================" << endl;
     tree->Insert(4);
+    tree->Insert(33);
+    tree->Insert(34);
+    tree->Insert(36);
+    tree->Insert(37);
+    tree->Insert(39);
+    tree->Insert(43);
     tree->Draw();
-    // tree->Insert(33);
-    // tree->Draw();
-    // tree->Insert(34);
-    // tree->Draw();
-    // tree->Insert(36);
-    // tree->Draw();
-    // tree->Insert(37);
-    // tree->Draw();
     
     // Page* p = new Page(2, 20, NULL);
     // Item* newItem1 = p->Insert(new Item(30, NULL));
