@@ -417,42 +417,15 @@ int main () {
 
 
     BTreeN* tree = new BTreeN(2, 20);
-    tree->Insert(40);
-    tree->Insert(10);
-    tree->Insert(30);
-    tree->Insert(15);
-    tree->Insert(35);
-    tree->Insert(7);
-    tree->Insert(26);
-    tree->Insert(18);
-    tree->Insert(22);
-    tree->Insert(5);
-    tree->Insert(42);
-    tree->Insert(13);
-    tree->Insert(46);
-    tree->Insert(27);
-    tree->Insert(8);
-    tree->Insert(32);
-    tree->Insert(38);
-    tree->Insert(24);
-    tree->Insert(45);
-    tree->Draw();
-    tree->Insert(25);
-    tree->Insert(21);
-    tree->Insert(28);
-    tree->Insert(29);
-    tree->Insert(31);
-    tree->Insert(23);
-    tree->Insert(6);
-    tree->Insert(12);
-    tree->Insert(41);
-    tree->Insert(4);
-    tree->Insert(33);
-    tree->Insert(34);
-    tree->Insert(36);
-    tree->Insert(37);
-    tree->Insert(39);
-    tree->Insert(43);
+    vector<int> vect{
+        40,10,30,15,35,7,26,18,22,
+        5,42,13,46,27,8,32,38,24,
+        45,25,21,28,29,31,23,6,12,
+        41,4,33,34,36,37,39,43
+    };
+    for (int x: vect) {
+        tree->Insert(x);
+    }
     tree->Draw();
     
     // Page* p = new Page(2, 20, NULL);
