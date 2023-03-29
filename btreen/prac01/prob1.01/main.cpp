@@ -76,10 +76,10 @@ Item::~Item() {
         delete this->RightPage;
 }
 void Item::Draw(int level) {
-    for (int i=0; i<level; i++)
-        cout << "\t";
+    for (int i=0; i<level; i++) cout << "\t\t\t";
     cout << this->Data << endl;
-    // cout << this->Data << "\x1B[31m[" << this << "]\033[0m" << endl;
+    for (int i=0; i<level; i++) cout << "\t\t\t";
+    cout << "  |" << "right_page=" << "\x1B[31m[" << this->RightPage << "]\033[0m" << endl;
 }
 
 
@@ -311,9 +311,14 @@ void Page::Draw(int level) {
         this->LeftPage->Draw(level+1);
     
     // print "--" at the begin of each level
-    for (int i=0; i<level+1; i++)
-        cout << "\t";
-    cout << "-- " << "\x1b[32m" << this->Parent << "\033[0m" << ";" << this << endl;
+    for (int i=0; i<level+1; i++) cout << "\t\t\t";
+    cout << "--" << endl;
+    for (int i=0; i<level+1; i++) cout << "\t\t\t";
+    cout << "  | left  : " << "\x1b[32m" << this->LeftPage << "\033[0m" << endl;
+    for (int i=0; i<level+1; i++) cout << "\t\t\t";
+    cout << "  | parent: " << "\x1b[32m" << this->Parent << "\033[0m" << endl;
+    for (int i=0; i<level+1; i++) cout << "\t\t\t";
+    cout << "  | this  : " << "\x1b[32m" << this << "\033[0m" << endl;
 
     for (int i=0; i<this->Elems.size(); i++) {
         this->Elems[i]->Draw(level+1);
@@ -321,7 +326,7 @@ void Page::Draw(int level) {
         // print "--" at the end of each level
         if (i==this->Elems.size()-1) {
             for (int i=0; i<level+1; i++)
-                cout << "\t";
+                cout << "\t\t\t";
             cout << "--" << endl;
         }
 
