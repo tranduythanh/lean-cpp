@@ -265,7 +265,7 @@ Item* Page::SearchToInsert(int data) {
             // continue searching on the leff branch
             return this->LeftPage->SearchToInsert(data);
         }
-        
+
         Item* _item = this->Insert(newItem);
         this->CheckToBreak();
         return _item;
