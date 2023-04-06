@@ -27,14 +27,14 @@ public:
     ~Page();
     int FirstData();
     int LastData();
-    Item* Insert(Item* item);
+    Item* InsertToItems(Item* item);
     void SetRightPage(int elemIdx, Page* page);
     void SetLeftPage(Page* page);
     Item* Search(int data, bool increase);
+    Page* SearchPotentialPage(int data);
     void SearchToAssignPage(Page* page);
     void Break();
     void CheckToBreak();
-    Item* SearchToInsert(int data);
     Item* SearchToDelete(int data);
     void Draw(int level);
     void DebugItems();
@@ -165,7 +165,7 @@ void Page::migrateNonRootPage(Page* left, Item* middleItem, Page* right) {
     cout << "middle_item.right_page.elem[0]: " << middleItem->RightPage->Elems.at(0)->Data << endl;
     cout << "middle_item.right_page.parent : " << middleItem->RightPage->Parent->FirstData() << endl;
 
-    Item* parentItem = this->Parent->Insert(middleItem);
+    Item* parentItem = this->Parent->InsertToItems(middleItem);
     
     assert(right->Elems.size() == 2);
     assert(left->Elems.size() == 2);
@@ -316,17 +316,13 @@ Item* Page::Search(int data, bool increase) {
 
     return NULL;
 }
-Item* Page::SearchToInsert(int data) {
-    Item* newItem = new Item(data, NULL, NULL);
+Page* Page::SearchPotentialPage(int data) {
     if (data < this->FirstData()) {
         if (this->LeftPage!= NULL) {
             // continue searching on the leff branch
-            return this->LeftPage->SearchToInsert(data);
+            return this->LeftPage->SearchPotentialPage(data);
         }
-
-        Item* _item = this->Insert(newItem);
-        this->CheckToBreak();
-        return _item;
+        return this;
     }
     // Check on every item
     for (int i=0; i<this->Elems.size(); i++) {
@@ -334,8 +330,7 @@ Item* Page::SearchToInsert(int data) {
 
         // data is alreay in page
         if (data == item->Data) {
-            item->Freq++;
-            return item;
+            return this;
         }
 
         // skip if data is larger than item
@@ -345,28 +340,22 @@ Item* Page::SearchToInsert(int data) {
         // Continue searching on the right branch of pre-item
         Item* preItem = this->Elems.at(i-1);
         if (preItem->RightPage != NULL) {
-            return preItem->RightPage->SearchToInsert(data);
+            return preItem->RightPage->SearchPotentialPage(data);
         }
-
-        // Insert to this page
-        Item* _item = this->Insert(newItem);
-        this->CheckToBreak();
-        return _item;
     }
+    
     // if data is larger than all items
     // Continue searching on the right branch
     if (this->Elems.back()->RightPage != NULL) {
-        return this->Elems.back()->RightPage->SearchToInsert(data);
+        return this->Elems.back()->RightPage->SearchPotentialPage(data);
     }
-    
-    // Or insert to this page
-    Item* _item = this->Insert(newItem);
-    this->CheckToBreak();
-    return _item;
+
+    return this;
 }
 Item* Page::SearchToDelete(int data) {
-    Item* item = this->Search(data, true);
-    item->Draw(0);
+    Page* page = this->SearchPotentialPage(data);
+    
+    page->DebugItems();
 }
 void Page::Draw(int level) {
     if (this->LeftPage!= NULL)
@@ -408,7 +397,7 @@ int Page::FirstData() {
 int Page::LastData() {
     return this->Elems.back()->Data;
 }
-Item* Page::Insert(Item* newItem) {
+Item* Page::InsertToItems(Item* newItem) {
     newItem->WrapperPage = this;
     for (int i=0; i<this->Elems.size(); i++) {
         Item* item = this->Elems.at(i);
@@ -441,7 +430,11 @@ BTreeN::~BTreeN() {
         delete this->Root;
 }
 void BTreeN::Insert(int data) {
-    this->Root->SearchToInsert(data);
+    Item* newItem = new Item(data, NULL, NULL);
+    Page* potentialPage = this->Root->SearchPotentialPage(data);
+    if (potentialPage == NULL) return;
+    potentialPage->InsertToItems(newItem);
+    potentialPage->CheckToBreak();
 }
 void BTreeN::Delete(int data) {
     this->Root->SearchToDelete(data);
@@ -492,7 +485,7 @@ int main () {
     }
     tree->Draw();
 
-    tree->Delete(40);
+    tree->Delete(19);
     
     // Page* p = new Page(2, 20, NULL);
     // Item* newItem1 = p->Insert(new Item(30, NULL));
