@@ -15,6 +15,7 @@ class Page
 private:
     void migrateRootPage(Page* left, Item* middleItem, Page* right);
     void migrateNonRootPage(Page* left, Item* middleItem, Page* right);
+    bool isDeficiency();
 
 public:
     int Order;
@@ -29,10 +30,12 @@ public:
     Item* Insert(Item* item);
     void SetRightPage(int elemIdx, Page* page);
     void SetLeftPage(Page* page);
+    Item* Search(int data, bool increase);
     void SearchToAssignPage(Page* page);
     void Break();
     void CheckToBreak();
     Item* SearchToInsert(int data);
+    Item* SearchToDelete(int data);
     void Draw(int level);
     void DebugItems();
 };
@@ -41,11 +44,14 @@ public:
 class Item
 {
 private:
+    bool isLeaf();
+
 public:
     int   Data;
+    Page* WrapperPage;
     Page* RightPage;
     int   Freq;
-    Item(int data, Page* rightPage);
+    Item(int data, Page* rightPage, Page* wrapperPage);
     ~Item();
     void Draw(int level);
 };
@@ -59,6 +65,7 @@ public:
     BTreeN(int order, int data);
     ~BTreeN();
     void Insert(int data);
+    void Delete(int data);
     void Draw();
 };
 
@@ -66,18 +73,24 @@ public:
 // Implement methods
 // ==============================================================
 
-Item::Item(int data, Page* rightPage) {
+Item::Item(int data, Page* rightPage, Page* wrapperPage) {
     this->Data = data;
     this->Freq = 1;
     this->RightPage = rightPage;
+    this->WrapperPage = wrapperPage;
 }
 Item::~Item() {
     if (this->RightPage != NULL)
         delete this->RightPage;
 }
+bool Item::isLeaf() {
+    return this->RightPage == NULL;
+}
 void Item::Draw(int level) {
     for (int i=0; i<level; i++) cout << "\t\t\t";
     cout << this->Data << endl;
+    for (int i=0; i<level; i++) cout << "\t\t\t";
+    cout << "  |" << "wrapper   =" << "\x1B[31m[" << this->WrapperPage << "]\033[0m" << endl;
     for (int i=0; i<level; i++) cout << "\t\t\t";
     cout << "  |" << "right_page=" << "\x1B[31m[" << this->RightPage << "]\033[0m" << endl;
 }
@@ -89,7 +102,7 @@ Page::Page(int order, int data, Page* parent) {
     this->Order = order;
     this->LeftPage = NULL;
     this->Parent = parent;
-    this->Elems.push_back(new Item(data, NULL));
+    this->Elems.push_back(new Item(data, NULL, this));
 }
 Page::~Page() {
     if (this->LeftPage != NULL)
@@ -101,6 +114,7 @@ Page::~Page() {
 void Page::migrateRootPage(Page* left, Item* middleItem, Page* right) {
     this->Elems.clear();
     this->Elems.push_back(middleItem);
+    middleItem->WrapperPage = this;
     this->SetRightPage(0, right);
     this->SetLeftPage(left);
 }
@@ -134,6 +148,9 @@ void Page::SearchToAssignPage(Page* page) {
         return;
     }
     this->SetRightPage(this->Elems.size()-1, page);
+}
+bool Page::isDeficiency() {
+    return this->Elems.size() < this->Order;
 }
 void Page::migrateNonRootPage(Page* left, Item* middleItem, Page* right) {
     assert(this->Parent != NULL);
@@ -184,12 +201,14 @@ void Page::Break() {
     );
 
     for (int i=0; i<left->Elems.size(); i++) {
+        left->Elems.at(i)->WrapperPage = left;
         if (left->Elems.at(i)->RightPage != NULL) {
             left->Elems.at(i)->RightPage->Parent = left;
         }
     }
 
     for (int i=0; i<right->Elems.size(); i++) {
+        right->Elems.at(i)->WrapperPage = right;
         if (right->Elems.at(i)->RightPage != NULL) {
             right->Elems.at(i)->RightPage->Parent = right;
         }
@@ -260,8 +279,45 @@ void Page::CheckToBreak() {
         this->Break();
     }
 }
+Item* Page::Search(int data, bool increase) {
+    if (data < this->FirstData()) {
+        if (this->LeftPage!= NULL) {
+            // continue searching on the leff branch
+            return this->LeftPage->Search(data, increase);
+        }
+        return NULL;
+    }
+    // Check on every item
+    for (int i=0; i<this->Elems.size(); i++) {
+        Item* item = this->Elems.at(i);
+
+        // data is alreay in page
+        if (data == item->Data) {
+            if (increase) item->Freq++;
+            return item;
+        }
+
+        // skip if data is larger than item
+        if (data > item->Data) 
+            continue;
+
+        // Continue searching on the right branch of pre-item
+        Item* preItem = this->Elems.at(i-1);
+        if (preItem->RightPage != NULL) {
+            return preItem->RightPage->Search(data, increase);
+        }
+    }
+    
+    // if data is larger than all items
+    // Continue searching on the right branch
+    if (this->Elems.back()->RightPage != NULL) {
+        return this->Elems.back()->RightPage->Search(data, increase);
+    }
+
+    return NULL;
+}
 Item* Page::SearchToInsert(int data) {
-    Item* newItem = new Item(data, NULL);
+    Item* newItem = new Item(data, NULL, NULL);
     if (data < this->FirstData()) {
         if (this->LeftPage!= NULL) {
             // continue searching on the leff branch
@@ -308,6 +364,10 @@ Item* Page::SearchToInsert(int data) {
     this->CheckToBreak();
     return _item;
 }
+Item* Page::SearchToDelete(int data) {
+    Item* item = this->Search(data, true);
+    item->Draw(0);
+}
 void Page::Draw(int level) {
     if (this->LeftPage!= NULL)
         this->LeftPage->Draw(level+1);
@@ -349,6 +409,7 @@ int Page::LastData() {
     return this->Elems.back()->Data;
 }
 Item* Page::Insert(Item* newItem) {
+    newItem->WrapperPage = this;
     for (int i=0; i<this->Elems.size(); i++) {
         Item* item = this->Elems.at(i);
         if (newItem->Data > item->Data) {
@@ -362,7 +423,6 @@ Item* Page::Insert(Item* newItem) {
         this->Elems.insert(Elems.begin()+i, newItem);
         return newItem;
     }
-
     this->Elems.push_back(newItem);
     return newItem;
 };
@@ -382,6 +442,9 @@ BTreeN::~BTreeN() {
 }
 void BTreeN::Insert(int data) {
     this->Root->SearchToInsert(data);
+}
+void BTreeN::Delete(int data) {
+    this->Root->SearchToDelete(data);
 }
 void BTreeN::Draw() {
     cout << "-------------------" << endl;
@@ -418,15 +481,18 @@ int main () {
 
     BTreeN* tree = new BTreeN(2, 20);
     vector<int> vect{
-        40,10,30,15,35,7,26,18,22,
-        5,42,13,46,27,8,32,38,24,
-        45,25,21,28,29,31,23,6,12,
-        41,4,33,34,36,37,39,43
+        20,
+        40, 10, 30, 15,
+        35, 7, 26, 18, 22,
+        5, 42, 13, 46, 27, 8, 32,
+        38, 24, 45, 25
     };
     for (int x: vect) {
         tree->Insert(x);
     }
     tree->Draw();
+
+    tree->Delete(40);
     
     // Page* p = new Page(2, 20, NULL);
     // Item* newItem1 = p->Insert(new Item(30, NULL));
