@@ -3,19 +3,34 @@
 #include <string>
 #include <vector>
 #include <cstdio>
-#include <cassert> 
+#include <cassert>
 
 using namespace std;
 
-// forward declaration
+// forward declarations
 class Item;
+class Page;
+class SearchResult;
 
-class Page
-{
+class Item {
+private:
+    bool isLeaf();
+
+public:
+    int Data;
+    Page* WrapperPage;
+    Page* RightPage;
+    int Freq;
+    Item(int data, Page* rightPage, Page* wrapperPage);
+    ~Item();
+    void Draw(int level);
+};
+
+class Page {
 private:
     void migrateRootPage(Page* left, Item* middleItem, Page* right);
     void migrateNonRootPage(Page* left, Item* middleItem, Page* right);
-    bool isDeficiency();
+    void eraseItem(int data);
 
 public:
     int Order;
@@ -27,40 +42,45 @@ public:
     ~Page();
     int FirstData();
     int LastData();
+    bool IsDeficiency();
     Item* InsertToItems(Item* item);
     void SetRightPage(int elemIdx, Page* page);
     void SetLeftPage(Page* page);
-    Item* Search(int data, bool increase);
+    Page* GetSibling();
+    SearchResult* Search(int data, bool increase);
     Page* SearchPotentialPage(int data);
     void SearchToAssignPage(Page* page);
     void Break();
     void CheckToBreak();
-    Item* SearchToDelete(int data);
+    Page* Delete(Item* item);
     void Draw(int level);
     void DebugItems();
 };
 
 
-class Item
-{
+class SearchResult {
 private:
-    bool isLeaf();
-
 public:
-    int   Data;
-    Page* WrapperPage;
-    Page* RightPage;
-    int   Freq;
-    Item(int data, Page* rightPage, Page* wrapperPage);
-    ~Item();
-    void Draw(int level);
+    Page* P;
+    int ItemIdx;
+    SearchResult(Page* page, int itemIndex){
+        this->P = page;
+        this->ItemIdx = itemIndex;
+    };
+    ~SearchResult();
+    Item* GetItem(){
+        if (this->ItemIdx < 0) {
+            return NULL;
+        }
+        return this->P->Elems[this->ItemIdx];
+    };
 };
 
-class BTreeN
-{
+
+class BTreeN {
 private:
 public:
-    int   Order;
+    int Order;
     Page* Root;
     BTreeN(int order, int data);
     ~BTreeN();
@@ -68,6 +88,7 @@ public:
     void Delete(int data);
     void Draw();
 };
+
 
 // ==============================================================
 // Implement methods
@@ -149,7 +170,7 @@ void Page::SearchToAssignPage(Page* page) {
     }
     this->SetRightPage(this->Elems.size()-1, page);
 }
-bool Page::isDeficiency() {
+bool Page::IsDeficiency() {
     return this->Elems.size() < this->Order;
 }
 void Page::migrateNonRootPage(Page* left, Item* middleItem, Page* right) {
@@ -279,7 +300,7 @@ void Page::CheckToBreak() {
         this->Break();
     }
 }
-Item* Page::Search(int data, bool increase) {
+SearchResult* Page::Search(int data, bool increase) {
     if (data < this->FirstData()) {
         if (this->LeftPage!= NULL) {
             // continue searching on the leff branch
@@ -294,7 +315,7 @@ Item* Page::Search(int data, bool increase) {
         // data is alreay in page
         if (data == item->Data) {
             if (increase) item->Freq++;
-            return item;
+            return new SearchResult(this, i);
         }
 
         // skip if data is larger than item
@@ -351,11 +372,6 @@ Page* Page::SearchPotentialPage(int data) {
     }
 
     return this;
-}
-Item* Page::SearchToDelete(int data) {
-    Page* page = this->SearchPotentialPage(data);
-    
-    page->DebugItems();
 }
 void Page::Draw(int level) {
     if (this->LeftPage!= NULL)
@@ -415,6 +431,17 @@ Item* Page::InsertToItems(Item* newItem) {
     this->Elems.push_back(newItem);
     return newItem;
 };
+Page* Page::GetSibling() {
+    Page* parent = this->Parent;
+}
+Page* Page::Delete(Item* item) {
+    for (int i=0; i<this->Elems.size(); i++) {
+        if (this->Elems.at(i) != item) continue;
+        
+        this->Elems.erase(Elems.begin()+i);
+        return this;
+    }
+}
 
 
 
@@ -437,7 +464,17 @@ void BTreeN::Insert(int data) {
     potentialPage->CheckToBreak();
 }
 void BTreeN::Delete(int data) {
-    this->Root->SearchToDelete(data);
+    SearchResult* sr = this->Root->Search(data, false);
+    Item* item = sr->GetItem();
+    
+    if (item == NULL) return;
+    
+    Page* page = item->WrapperPage->Delete(item);
+    delete(item);
+
+    if (!page->IsDeficiency()) return;
+
+
 }
 void BTreeN::Draw() {
     cout << "-------------------" << endl;
@@ -485,7 +522,10 @@ int main () {
     }
     tree->Draw();
 
-    tree->Delete(19);
+    tree->Delete(46);
+    tree->Delete(45);
+    
+    tree->Draw();
     
     // Page* p = new Page(2, 20, NULL);
     // Item* newItem1 = p->Insert(new Item(30, NULL));
