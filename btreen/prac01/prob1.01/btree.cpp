@@ -330,6 +330,9 @@ SearchResult* Page::Search(int data, bool increase) {
         }
         return nullptr;
     }
+
+    if (this->Elems.size() == 0) return nullptr;
+
     // Check on every item
     for (int i=0; i<this->Elems.size(); i++) {
         auto item = this->Elems.at(i);
@@ -360,13 +363,16 @@ SearchResult* Page::Search(int data, bool increase) {
     return nullptr;
 }
 Page* Page::SearchPotentialPage(int data) {
-    if (data < this->FirstData()) {
+    if (this->Elems.size() > 0 && data < this->FirstData()) {
         if (this->LeftPage) {
             // continue searching on the leff branch
             return this->LeftPage->SearchPotentialPage(data);
         }
         return this;
     }
+
+    if (this->Elems.size() == 0) return this;
+
     // Check on every item
     for (int i=0; i<this->Elems.size(); i++) {
         auto item = this->Elems.at(i);
@@ -542,6 +548,7 @@ Page* Page::HandleDeficiency() {
 
     auto left = sibling;
     auto right = this;
+
     if (sibling->FirstData() > this->FirstData()) {
         left = this;
         right = sibling;
@@ -605,7 +612,12 @@ BTreeN::~BTreeN() {
 }
 void BTreeN::Insert(int data) {
     auto newItem = new Item(data, nullptr, nullptr);
+    
     auto potentialPage = this->Root->SearchPotentialPage(data);
+    
+    cout << "here" << endl;
+
+    
     if (potentialPage == nullptr) return;
     potentialPage->InsertToItems(newItem);
     potentialPage->CheckToBreak();
