@@ -100,7 +100,6 @@ public:
     void Draw();
 };
 
-
 // ==============================================================
 // Implement methods
 // ==============================================================
@@ -130,7 +129,6 @@ void Item::Draw(int level) {
 }
 
 
-
 // ----------------------------------
 Page::Page(int order, int data, Page* parent) {
     this->Order = order;
@@ -145,6 +143,18 @@ Page::~Page() {
     for (int i=0; i<this->Elems.size(); i++) 
         delete this->Elems[i];
 }
+
+// method migrates the root page to new pages 
+// when the root page is full. It takes three arguments 
+// - left
+// - middleItem
+// - right
+// which are the pages to be assigned to the 
+// left, middle, and right of the root page, 
+// respectively. The method sets the middle item 
+// as the only element of the root page, sets the 
+// middle item's wrapper page to the root page, and 
+// sets the left and right pages of the middle item.
 void Page::migrateRootPage(Page* left, Item* middleItem, Page* right) {
     this->Elems.clear();
     this->Elems.push_back(middleItem);
@@ -152,14 +162,39 @@ void Page::migrateRootPage(Page* left, Item* middleItem, Page* right) {
     this->SetRightPage(0, right);
     this->SetLeftPage(left);
 }
+
+// method sets the right page of an element in the 
+// current page. It takes two arguments - elemIdx 
+// and page - which are the index of the element 
+// and the page to be set as the right page of the 
+// element, respectively. The method sets the right 
+// page of the element at the specified index as the 
+// given page and sets the parent of the given page 
+// as the current page.
 void Page::SetRightPage(int elemIdx, Page* page) {
     this->Elems.at(elemIdx)->RightPage = page;
     page->Parent = this;
 }
+
+// method sets the left page of the current page. 
+// It takes one argument - page - which is the page 
+// to be set as the left page of the current page. 
+// The method sets the left page of the current page 
+// as the given page and sets the parent of the 
+// given page as the current page.
 void Page::SetLeftPage(Page* page) {
     this->LeftPage = page;
     page->Parent = this;
 }
+
+// This method searches for the correct position 
+// of page to be assigned to the current page's 
+// child pages. If page is less than the first 
+// element of the current page, then page is set 
+// as the left child of the current page. If page 
+// is greater than an element in the current page, 
+// then page is set as the right child of the 
+// previous element.
 void Page::SearchToAssignPage(Page* page) {
     if (page->LastData() < this->FirstData()) {
         this->SetLeftPage(page);
@@ -176,9 +211,19 @@ void Page::SearchToAssignPage(Page* page) {
     }
     this->SetRightPage(this->Elems.size()-1, page);
 }
+
+// This method checks whether the number of 
+// elements in the page is less than the order of the B-Tree.
 bool Page::IsDeficiency() {
     return this->Elems.size() < this->Order;
 }
+
+// This method is called when the current page is not 
+// a root page and needs to be split into two pages. 
+// It creates a new item in the parent page containing 
+// middleItem and assigns the right page to it. Then it 
+// assigns left page to the correct position in the 
+// parent page.
 void Page::migrateNonRootPage(Page* left, Item* middleItem, Page* right) {
     Item* parentItem = this->Parent->InsertToItems(middleItem);
     parentItem->RightPage = right;
@@ -186,6 +231,13 @@ void Page::migrateNonRootPage(Page* left, Item* middleItem, Page* right) {
     this->Parent->SearchToAssignPage(left);
     this->Parent->CheckToBreak();
 }
+
+// This method is called when a page needs to be split 
+// into two pages. It creates two new pages, left and 
+// right, and copies half of the elements from the current 
+// page to each of them. It also delegates the 
+// middle element's right page to the left of the new 
+// right page.
 void Page::Break() {
     auto left = new Page(this->Order, 0, this);
     auto right = new Page(this->Order, 0, this);
@@ -260,11 +312,21 @@ void Page::Break() {
 
     this->migrateNonRootPage(left, middleItem, right);
 }
+
+// This method checks whether the current page needs 
+// to be split into two pages. If the number of elements 
+// in the page is greater than twice the order of the 
+// B-Tree, then it calls the Break method.
 void Page::CheckToBreak() {
     if (this->Elems.size() > 2*this->Order) {
         this->Break();
     }
 }
+
+// searches for a specific data value in the tree, 
+// and returns a pointer to a SearchResult object 
+// that contains a reference to the page that contains 
+// the data and the index of the item within that page.
 SearchResult* Page::Search(int data, bool increase) {
     if (this->Elems.size() > 0 && data < this->FirstData()) {
         if (this->LeftPage) {
@@ -305,6 +367,13 @@ SearchResult* Page::Search(int data, bool increase) {
 
     return nullptr;
 }
+
+//  is used to search for the page in which the data 
+// should be inserted or the page from which data should 
+// be removed. If the data is already in the tree, it returns 
+// the page that contains the data. If the data is not in 
+// the tree, it returns the leaf page where the data should 
+// be inserted.
 Page* Page::SearchPotentialPage(int data) {
     if (this->Elems.size() > 0 && data < this->FirstData()) {
         if (this->LeftPage) {
@@ -344,6 +413,7 @@ Page* Page::SearchPotentialPage(int data) {
 
     return this;
 }
+
 void Page::Draw(int level) const {
     if (this->LeftPage)
         this->LeftPage->Draw(level+1);
@@ -389,6 +459,20 @@ int Page::FirstData() {
 int Page::LastData() {
     return this->Elems.back()->Data;
 }
+
+// method inserts a new Item object into the Elems vector 
+// of the current Page object in a way that maintains the 
+// order of Data values in the vector. It first sets the 
+// WrapperPage attribute of the new item to the current 
+// page. It then uses the lower_bound function from the 
+// <algorithm> library to find the first position in the 
+// Elems vector where the new item's Data value could be 
+// inserted while preserving the order of the elements. 
+// If an element with the same Data value already exists, 
+// it increments the Freq attribute of that element and 
+// returns a pointer to that element. Otherwise, it inserts 
+// the new item at the position returned by lower_bound 
+// and returns a pointer to the new item.
 Item* Page::InsertToItems(Item* newItem) {
     newItem->WrapperPage = this;
     auto it = std::lower_bound(Elems.begin(), Elems.end(), newItem, [](Item* a, Item* b) { return a->Data < b->Data; });
@@ -399,6 +483,15 @@ Item* Page::InsertToItems(Item* newItem) {
     Elems.insert(it, newItem);
     return newItem;
 }
+
+// method returns the index of the Item object in the 
+// Parent page's Elems vector whose RightPage attribute 
+// points to the current page. If the current page has 
+// no parent, it returns -1. It searches the Parent page's
+// Elems vector for the first element whose RightPage 
+// attribute is equal to the current page. It then 
+// calculates the index of that element in the Elems 
+// vector using pointer arithmetic and returns it.
 int Page::GetParentItemIndex() const {
     if (!Parent) {
         return -1;
@@ -411,6 +504,10 @@ int Page::GetParentItemIndex() const {
     return -1;
 }
 
+// Returns the right sibling of the current page. 
+// If the current page is the leftmost child of 
+// the parent, it returns the right sibling of 
+// the page to the right of the current page.
 Page* Page::GetSiblingRight() const {
     if (!Parent) {
         return nullptr;
@@ -434,6 +531,10 @@ Page* Page::GetSiblingRight() const {
     return Parent->Elems[i]->RightPage;
 }
 
+// Returns the left sibling of the current page. 
+// If the current page is the rightmost child of 
+// the parent, it returns the left sibling of 
+// the page to the left of the current page.
 Page* Page::GetSiblingLeft() const {
     if (!Parent) {
         return nullptr;
@@ -450,11 +551,23 @@ Page* Page::GetSiblingLeft() const {
     }
     return sibling;
 }
+
+// Returns either the left or the right sibling 
+// of the current page. If there is no left or 
+// right sibling, it returns nullptr. This method 
+// first tries to get the right sibling of the 
+// current page, and if it fails, it tries to 
+// get the left sibling.
 Page* Page::GetSibling() const {
     auto sibling = this->GetSiblingRight();
     if (sibling ) return sibling;
     return this->GetSiblingLeft();
 }
+
+// method deletes an item from the page's 
+// elements vector, given the item pointer. 
+// If the item is found in the vector, it is 
+// erased, and the updated page is returned.
 Page* Page::Delete(Item* item) {
     auto it = std::find(Elems.begin(), Elems.end(), item);
     if (it != Elems.end()) {
@@ -462,6 +575,15 @@ Page* Page::Delete(Item* item) {
     }
     return this;
 }
+
+// method merges the current page with its 
+// left sibling page. The left sibling is 
+// passed as an argument, and the current page 
+// is merged to its left. The parent item that 
+// separates the two pages is moved from the 
+// current page to the left sibling. Then, all 
+// the items from the current page are moved 
+// to the left sibling.
 void Page::MergeTo(Page* leftSibling) {
     int parentItemIdx = this->GetParentItemIndex();
     if (parentItemIdx == -1) {
@@ -480,6 +602,18 @@ void Page::MergeTo(Page* leftSibling) {
     
     this->Parent->Delete(parentItem);
 }
+
+// method checks if the current page is deficient 
+// (i.e., has less than Order elements). If it is, 
+// it tries to borrow an item from its sibling or 
+// merge with a sibling. If a merge happens, the 
+// parent item is moved from the parent to the left 
+// sibling, and all the items from the current page 
+// are moved to the left sibling. The method then 
+// calls CheckToBreak() to check if the resulting 
+// page is still oversized and possibly breaks the 
+// page again. Finally, the method calls itself 
+// recursively on the parent's page, if necessary.
 Page* Page::HandleDeficiency() {
     if (!this->IsDeficiency()) return nullptr;
 
@@ -532,6 +666,16 @@ BTreeN::~BTreeN() {
     this->Order = 0;
     if (this->Root ) delete this->Root;
 }
+
+// method takes an integer value and creates 
+// a new item with that value. It then searches 
+// for the potential page where the new item 
+// should be inserted using the SearchPotentialPage 
+// method of the root node. If a potential page is 
+// found, the new item is inserted into that page 
+// using the InsertToItems method. Finally, the 
+// CheckToBreak method of the potential page is 
+// called to check if the page needs to be split.
 void BTreeN::Insert(int data) {
     auto newItem = new Item(data, nullptr, nullptr);
     auto potentialPage = this->Root->SearchPotentialPage(data);
@@ -539,6 +683,13 @@ void BTreeN::Insert(int data) {
     potentialPage->InsertToItems(newItem);
     potentialPage->CheckToBreak();
 }
+
+// method takes an item as input and recursively 
+// searches for the right-most element in its right 
+// child. The result is a SearchResult object that 
+// contains a pointer to the page containing the 
+// right-most element and the index of that element 
+// in the page's element vector.
 SearchResult* BTreeN::SearchMaxDataInBranchOfItem(Item* item) {
     if (item->RightPage) {
         auto newItem = item->RightPage->Elems.back();
@@ -547,6 +698,14 @@ SearchResult* BTreeN::SearchMaxDataInBranchOfItem(Item* item) {
     // this item is what we want
     return item->WrapperPage->Search(item->Data, false);
 }
+
+// method takes an item as input and searches for 
+// its left neighbor in the tree. If a left neighbor 
+// is found, a SearchResult object is returned that 
+// contains a pointer to the page containing the 
+// left neighbor and the index of that element in 
+// the page's element vector. If there is no left 
+// neighbor, nullptr is returned.
 SearchResult* BTreeN::SearchLeftNeighborOfItem(Item* item) {
     auto sr = this->Root->Search(item->Data, false);
     
@@ -562,6 +721,13 @@ SearchResult* BTreeN::SearchLeftNeighborOfItem(Item* item) {
     return nullptr;
 }
 
+// method takes an item as input, deletes the item 
+// from the tree using the Delete method of the 
+// item's wrapper page, and then calls the 
+// HandleDeficiency method of the page to handle 
+// any deficiencies that may arise due to the 
+// deletion. If the page becomes the new root of 
+// the tree, the Root pointer is updated accordingly.
 void BTreeN::DeleteLeaf(Item* item) {
     auto page = item->WrapperPage->Delete(item);
     delete(item);
@@ -571,6 +737,17 @@ void BTreeN::DeleteLeaf(Item* item) {
     }
     return;
 }
+
+// method takes an item as input and performs 
+// a special deletion procedure for non-leaf nodes. 
+// It searches for the right-most element in the 
+// left child of the item using the 
+// SearchLeftNeighborOfItem and 
+// SearchMaxDataInBranchOfItem methods. The right-most 
+// element is then deleted using the DeleteLeaf 
+// method. Finally, the value of the deleted 
+// element is replaced with the value of the 
+// right-most element.
 void BTreeN::DeleteNonLeaf(Item* item) {
     auto parent = item->WrapperPage->Parent;
 
@@ -605,6 +782,14 @@ void BTreeN::DeleteNonLeaf(Item* item) {
     // handle special case: item is in root, and it is the only item
     return;
 }
+
+// method takes an integer value as input and 
+// first searches for an item in the tree with 
+// that value using the Search method of the root 
+// node. If the item is found and it is a leaf, 
+// the DeleteLeaf method is called to delete it. 
+// If the item is found and it is not a leaf, 
+// the DeleteNonLeaf method is called.
 void BTreeN::Delete(int data) {
     auto sr0 = this->Root->Search(data, false);
     if (sr0 == nullptr) return;
@@ -617,6 +802,7 @@ void BTreeN::Delete(int data) {
 
     return this->DeleteNonLeaf(item);
 }
+
 void BTreeN::Draw() {
     cout << "-------------------" << endl;
     this->Root->Draw(0);
