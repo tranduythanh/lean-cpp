@@ -4,8 +4,11 @@
 #include <vector>
 #include <cstdio>
 #include <cassert>
+#include <stdexcept>
 
 using namespace std;
+
+bool debug = false;
 
 // forward declarations
 class Item;
@@ -14,7 +17,6 @@ class SearchResult;
 
 class Item {
 private:
-    bool isLeaf();
 
 public:
     int Data;
@@ -23,6 +25,7 @@ public:
     int Freq;
     Item(int data, Page* rightPage, Page* wrapperPage);
     ~Item();
+    bool IsLeaf();
     void Draw(int level);
 };
 
@@ -46,14 +49,19 @@ public:
     Item* InsertToItems(Item* item);
     void SetRightPage(int elemIdx, Page* page);
     void SetLeftPage(Page* page);
-    Page* GetSibling();
+    int GetParentItemIndex() const;
+    Page* GetSiblingRight() const;
+    Page* GetSiblingLeft() const;
+    Page* GetSibling() const;
+    void MergeTo(Page* leftSibling);
     SearchResult* Search(int data, bool increase);
     Page* SearchPotentialPage(int data);
     void SearchToAssignPage(Page* page);
     void Break();
     void CheckToBreak();
+    void HandleDeficiency();
     Page* Delete(Item* item);
-    void Draw(int level);
+    void Draw(int level) const;
     void DebugItems();
 };
 
@@ -70,7 +78,7 @@ public:
     ~SearchResult();
     Item* GetItem(){
         if (this->ItemIdx < 0) {
-            return NULL;
+            return nullptr;
         }
         return this->P->Elems[this->ItemIdx];
     };
@@ -101,15 +109,17 @@ Item::Item(int data, Page* rightPage, Page* wrapperPage) {
     this->WrapperPage = wrapperPage;
 }
 Item::~Item() {
-    if (this->RightPage != NULL)
+    if (this->RightPage )
         delete this->RightPage;
 }
-bool Item::isLeaf() {
-    return this->RightPage == NULL;
+bool Item::IsLeaf() {
+    return this->RightPage == nullptr;
 }
 void Item::Draw(int level) {
     for (int i=0; i<level; i++) cout << "\t\t\t";
     cout << this->Data << endl;
+    if (!debug) return;
+
     for (int i=0; i<level; i++) cout << "\t\t\t";
     cout << "  |" << "wrapper   =" << "\x1B[31m[" << this->WrapperPage << "]\033[0m" << endl;
     for (int i=0; i<level; i++) cout << "\t\t\t";
@@ -121,12 +131,12 @@ void Item::Draw(int level) {
 // ----------------------------------
 Page::Page(int order, int data, Page* parent) {
     this->Order = order;
-    this->LeftPage = NULL;
+    this->LeftPage = nullptr;
     this->Parent = parent;
-    this->Elems.push_back(new Item(data, NULL, this));
+    this->Elems.push_back(new Item(data, nullptr, this));
 }
 Page::~Page() {
-    if (this->LeftPage != NULL)
+    if (this->LeftPage )
         delete this->LeftPage;
 
     for (int i=0; i<this->Elems.size(); i++) 
@@ -148,20 +158,20 @@ void Page::SetLeftPage(Page* page) {
     page->Parent = this;
 }
 void Page::SearchToAssignPage(Page* page) {
-    cout << "first data: " << this->FirstData() << endl;
-    cout << "last  data: " << page->LastData() << endl;
+    // cout << "first data: " << this->FirstData() << endl;
+    // cout << "last  data: " << page->LastData() << endl;
 
     if (page->LastData() < this->FirstData()) {
         this->SetLeftPage(page);
         return;
     }
 
-    cout << "elems size: " << this->Elems.size() << endl;
+    // cout << "elems size: " << this->Elems.size() << endl;
     for (int i=0; i<this->Elems.size(); i++) {
         if (page->LastData() > this->Elems.at(i)->Data) {
-            cout << "** elem data: " << this->Elems.at(i)->Data << endl;
-            cout << "   last data: " << page->LastData() << endl;
-            cout << "continue" << endl;
+            // cout << "** elem data: " << this->Elems.at(i)->Data << endl;
+            // cout << "   last data: " << page->LastData() << endl;
+            // cout << "continue" << endl;
             continue;
         }
         
@@ -174,27 +184,27 @@ bool Page::IsDeficiency() {
     return this->Elems.size() < this->Order;
 }
 void Page::migrateNonRootPage(Page* left, Item* middleItem, Page* right) {
-    assert(this->Parent != NULL);
+    assert(this->Parent );
     assert(this->Elems.size() == 2*this->Order+1);
 
-    cout << "Draw relative Parent" << endl;
-    this->Parent->DebugItems();
-    cout << "====================" << endl;
+    // cout << "Draw relative Parent" << endl;
+    // this->Parent->DebugItems();
+    // cout << "====================" << endl;
 
-    cout << "\n\n====================" << endl;
-    cout << "middle_item.data              : " << middleItem->Data << endl;
-    cout << "middle_item.right_page.elem[0]: " << middleItem->RightPage->Elems.at(0)->Data << endl;
-    cout << "middle_item.right_page.parent : " << middleItem->RightPage->Parent->FirstData() << endl;
+    // cout << "\n\n====================" << endl;
+    // cout << "middle_item.data              : " << middleItem->Data << endl;
+    // cout << "middle_item.right_page.elem[0]: " << middleItem->RightPage->Elems.at(0)->Data << endl;
+    // cout << "middle_item.right_page.parent : " << middleItem->RightPage->Parent->FirstData() << endl;
 
     Item* parentItem = this->Parent->InsertToItems(middleItem);
     
     assert(right->Elems.size() == 2);
     assert(left->Elems.size() == 2);
 
-    cout << "parent_item.data              : " << parentItem->Data << endl;
-    cout << "parent_item.right_page.elem[0]: " << parentItem->RightPage->Elems.at(0)->Data << endl;
-    cout << "parent_item.right_page.parent : " << parentItem->RightPage->Parent->FirstData() << endl;
-    cout << "====================\n\n" << endl;
+    // cout << "parent_item.data              : " << parentItem->Data << endl;
+    // cout << "parent_item.right_page.elem[0]: " << parentItem->RightPage->Elems.at(0)->Data << endl;
+    // cout << "parent_item.right_page.parent : " << parentItem->RightPage->Parent->FirstData() << endl;
+    // cout << "====================\n\n" << endl;
     
     parentItem->RightPage = right;
     right->Parent = this->Parent;
@@ -202,8 +212,8 @@ void Page::migrateNonRootPage(Page* left, Item* middleItem, Page* right) {
     assert(right->Elems.size() == 2);
     assert(left->Elems.size() == 2);
 
-    cout << "left  "; left->DebugItems();
-    cout << "right "; right->DebugItems();
+    // cout << "left  "; left->DebugItems();
+    // cout << "right "; right->DebugItems();
 
     this->Parent->SearchToAssignPage(left);
 
@@ -221,17 +231,17 @@ void Page::Break() {
         this->Elems.end()
     );
 
-    for (int i=0; i<left->Elems.size(); i++) {
-        left->Elems.at(i)->WrapperPage = left;
-        if (left->Elems.at(i)->RightPage != NULL) {
-            left->Elems.at(i)->RightPage->Parent = left;
+    for (const auto& item : left->Elems) {
+        item->WrapperPage = left;
+        if (item->RightPage) {
+            item->RightPage->Parent = left;
         }
     }
 
-    for (int i=0; i<right->Elems.size(); i++) {
-        right->Elems.at(i)->WrapperPage = right;
-        if (right->Elems.at(i)->RightPage != NULL) {
-            right->Elems.at(i)->RightPage->Parent = right;
+    for (const auto& item : right->Elems) {
+        item->WrapperPage = right;
+        if (item->RightPage) {
+            item->RightPage->Parent = right;
         }
     }
 
@@ -240,7 +250,7 @@ void Page::Break() {
     // Inheritance ========================
     // "left" must be inherit the LeftPage of original page
     left->LeftPage = this->LeftPage;
-    if (left->LeftPage!= NULL) {
+    if (left->LeftPage) {
         left->LeftPage->Parent = left;
     }
 
@@ -261,7 +271,7 @@ void Page::Break() {
     // [...]  [...] [...]  [26,27] 
     // delegate the middle item's right page to the left of new right-page
     right->LeftPage = middleItem->RightPage;
-    if (right->LeftPage!= NULL) {
+    if (right->LeftPage) {
         right->LeftPage->Parent = right;
     }
     // new RightPage of middle item will be the "right"
@@ -269,44 +279,44 @@ void Page::Break() {
     // ====================================
     
 
-    if (this->Parent == NULL) {
-        cout << "migrate root" << endl;
+    if (this->Parent == nullptr) {
+        // cout << "migrate root" << endl;
         this->migrateRootPage(left, middleItem, right);
         return;
     }
 
-    cout << "migrate non root" << endl;
-    cout << "left" << endl;
-    left->Draw(0);
-    cout << "middle" << endl;
-    middleItem->Draw(0);
-    cout << "right" << endl;
-    right->Draw(0);
+    // cout << "migrate non root" << endl;
+    // cout << "left" << endl;
+    // left->Draw(0);
+    // cout << "middle" << endl;
+    // middleItem->Draw(0);
+    // cout << "right" << endl;
+    // right->Draw(0);
     
-    cout << endl;
-    cout << "middle_item.data              : " << middleItem->Data << endl;
-    cout << "middle_item.right_page.elem[0]: " << middleItem->RightPage->Elems.at(0)->Data << endl;
-    cout << "middle_item.right_page.parent : " << middleItem->RightPage->Parent->FirstData() << endl;
-    cout << endl;
+    // cout << endl;
+    // cout << "middle_item.data              : " << middleItem->Data << endl;
+    // cout << "middle_item.right_page.elem[0]: " << middleItem->RightPage->Elems.at(0)->Data << endl;
+    // cout << "middle_item.right_page.parent : " << middleItem->RightPage->Parent->FirstData() << endl;
+    // cout << endl;
     
     this->migrateNonRootPage(left, middleItem, right);
 }
 void Page::CheckToBreak() {
-    cout << "######### check to break" << endl;
-    this->DebugItems();
+    // cout << "######### check to break" << endl;
+    // this->DebugItems();
     if (this->Elems.size() > 2*this->Order) {
-        this->Draw(0);
+        // this->Draw(0);
         cout << "######### let's break" << endl;
         this->Break();
     }
 }
 SearchResult* Page::Search(int data, bool increase) {
     if (data < this->FirstData()) {
-        if (this->LeftPage!= NULL) {
+        if (this->LeftPage) {
             // continue searching on the leff branch
             return this->LeftPage->Search(data, increase);
         }
-        return NULL;
+        return nullptr;
     }
     // Check on every item
     for (int i=0; i<this->Elems.size(); i++) {
@@ -324,22 +334,22 @@ SearchResult* Page::Search(int data, bool increase) {
 
         // Continue searching on the right branch of pre-item
         Item* preItem = this->Elems.at(i-1);
-        if (preItem->RightPage != NULL) {
+        if (preItem->RightPage ) {
             return preItem->RightPage->Search(data, increase);
         }
     }
     
     // if data is larger than all items
     // Continue searching on the right branch
-    if (this->Elems.back()->RightPage != NULL) {
+    if (this->Elems.back()->RightPage ) {
         return this->Elems.back()->RightPage->Search(data, increase);
     }
 
-    return NULL;
+    return nullptr;
 }
 Page* Page::SearchPotentialPage(int data) {
     if (data < this->FirstData()) {
-        if (this->LeftPage!= NULL) {
+        if (this->LeftPage) {
             // continue searching on the leff branch
             return this->LeftPage->SearchPotentialPage(data);
         }
@@ -360,45 +370,50 @@ Page* Page::SearchPotentialPage(int data) {
 
         // Continue searching on the right branch of pre-item
         Item* preItem = this->Elems.at(i-1);
-        if (preItem->RightPage != NULL) {
+        if (preItem->RightPage ) {
             return preItem->RightPage->SearchPotentialPage(data);
         }
     }
     
     // if data is larger than all items
     // Continue searching on the right branch
-    if (this->Elems.back()->RightPage != NULL) {
+    if (this->Elems.back()->RightPage ) {
         return this->Elems.back()->RightPage->SearchPotentialPage(data);
     }
 
     return this;
 }
-void Page::Draw(int level) {
-    if (this->LeftPage!= NULL)
+void Page::Draw(int level) const {
+    if (this->LeftPage)
         this->LeftPage->Draw(level+1);
     
     // print "--" at the begin of each level
-    for (int i=0; i<level+1; i++) cout << "\t\t\t";
+    cout << string((level + 1)*3, '\t');
     cout << "--" << endl;
-    for (int i=0; i<level+1; i++) cout << "\t\t\t";
-    cout << "  | left  : " << "\x1b[32m" << this->LeftPage << "\033[0m" << endl;
-    for (int i=0; i<level+1; i++) cout << "\t\t\t";
-    cout << "  | parent: " << "\x1b[32m" << this->Parent << "\033[0m" << endl;
-    for (int i=0; i<level+1; i++) cout << "\t\t\t";
-    cout << "  | this  : " << "\x1b[32m" << this << "\033[0m" << endl;
 
-    for (int i=0; i<this->Elems.size(); i++) {
-        this->Elems[i]->Draw(level+1);
-        
-        // print "--" at the end of each level
-        if (i==this->Elems.size()-1) {
-            for (int i=0; i<level+1; i++)
-                cout << "\t\t\t";
-            cout << "--" << endl;
+    if (debug) {
+        cout << string((level + 1)*3, '\t');
+        cout << "  | left  : " << "\x1b[32m" << this->LeftPage << "\033[0m" << endl;
+        cout << string((level + 1)*3, '\t');
+        cout << "  | parent: " << "\x1b[32m" << this->Parent << "\033[0m" << endl;
+        cout << string((level + 1)*3, '\t');
+        cout << "  | this  : " << "\x1b[32m" << this << "\033[0m" << endl;
+    }
+
+        // Traverse the items of the page
+    for (const auto& item : this->Elems) {
+        // Draw the current item
+        item->Draw(level + 1);
+
+        // Print a horizontal line at the end of each level
+        if (&item == &this->Elems.back()) {
+            std::cout << string((level+1) * 3, '\t') << "--" << '\n';
         }
 
-        if (this->Elems[i]->RightPage != NULL)
-            this->Elems[i]->RightPage->Draw(level+1);
+        // Recursively draw the right page of the current item
+        if (item->RightPage) {
+            item->RightPage->Draw(level + 1);
+        }
     }
 }
 void Page::DebugItems() {
@@ -415,31 +430,130 @@ int Page::LastData() {
 }
 Item* Page::InsertToItems(Item* newItem) {
     newItem->WrapperPage = this;
-    for (int i=0; i<this->Elems.size(); i++) {
-        Item* item = this->Elems.at(i);
-        if (newItem->Data > item->Data) {
-            continue;
-        }
-        if (newItem->Data == item->Data) {
-            item->Freq++;
-            return item;
-        }
-
-        this->Elems.insert(Elems.begin()+i, newItem);
-        return newItem;
+    auto it = std::lower_bound(Elems.begin(), Elems.end(), newItem, [](Item* a, Item* b) { return a->Data < b->Data; });
+    if (it != Elems.end() && (*it)->Data == newItem->Data) {
+        (*it)->Freq++;
+        return *it;
     }
-    this->Elems.push_back(newItem);
+    Elems.insert(it, newItem);
     return newItem;
-};
-Page* Page::GetSibling() {
-    Page* parent = this->Parent;
+}
+int Page::GetParentItemIndex() const {
+    if (!Parent) {
+        return -1;
+    }
+    for (const auto& elem : Parent->Elems) {
+        if (elem->RightPage == this) {
+            return &elem - &Parent->Elems.front();
+        }
+    }
+    return -1;
+}
+
+Page* Page::GetSiblingRight() const {
+    if (!Parent) {
+        return nullptr;
+    }
+
+    // Get right sibling for left page
+    if (Parent->LeftPage == this) {
+        for (const auto& elem : Parent->Elems) {
+            if (elem->RightPage) {
+                return elem->RightPage;
+            }
+        }
+        return nullptr;
+    }
+
+    // Get right sibling for right page
+    const int i = GetParentItemIndex() + 1;
+    if (i == Parent->Elems.size()) {
+        return nullptr;
+    }
+    return Parent->Elems[i]->RightPage;
+}
+
+Page* Page::GetSiblingLeft() const {
+    if (!Parent) {
+        return nullptr;
+    }
+    
+    auto sibling = Parent->LeftPage;
+    for (const auto& elem : Parent->Elems) {
+        // Try to get LEFT sibling first
+        if (elem->RightPage != this) {
+            sibling = elem->RightPage ? elem->RightPage : sibling;
+        } else {
+            break;
+        }
+    }
+    return sibling;
+}
+Page* Page::GetSibling() const {
+    Page* sibling = this->GetSiblingRight();
+    if (sibling ) return sibling;
+    return this->GetSiblingLeft();
 }
 Page* Page::Delete(Item* item) {
-    for (int i=0; i<this->Elems.size(); i++) {
-        if (this->Elems.at(i) != item) continue;
-        
-        this->Elems.erase(Elems.begin()+i);
-        return this;
+    auto it = std::find(Elems.begin(), Elems.end(), item);
+    if (it != Elems.end()) {
+        Elems.erase(it);
+    }
+    return this;
+}
+void Page::MergeTo(Page* leftSibling) {
+    int parentItemIdx = this->GetParentItemIndex();
+    if (parentItemIdx == -1) {
+        throw std::runtime_error("BTreeN::Delete: No parentItemIdx");
+    }
+    Item* parentItem = this->Parent->Elems.at(parentItemIdx);
+    
+    parentItem->WrapperPage = leftSibling;
+    parentItem->RightPage = this->LeftPage;
+    leftSibling->InsertToItems(parentItem);
+
+    for (auto& item : this->Elems) {
+        item->WrapperPage = leftSibling;
+        leftSibling->InsertToItems(item);
+    }
+    
+    this->Parent->Delete(parentItem);
+}
+void Page::HandleDeficiency() {
+    if (!this->IsDeficiency()) return;
+
+    // Skip if this page is root page
+    if (this->Parent == nullptr) return;
+
+    cout << "Page::HandleDeficiency() this: ";
+    this->DebugItems();
+    Page* sibling = this->GetSibling();
+    cout << "Page::HandleDeficiency() sibling: ";
+    sibling->DebugItems();
+    cout << "-----------------------------------" << endl;
+    if (sibling == nullptr) throw runtime_error("BTreeN::Delete: No sibling");
+
+    Page* left = sibling;
+    Page* right = this;
+    if (sibling->FirstData() > this->FirstData()) {
+        left = this;
+        right = sibling;
+    }
+    right->MergeTo(left);
+
+    cout << "Page::HandleDeficiency() left: ";
+    left->DebugItems();
+
+    left->CheckToBreak();
+    
+    if (left->Parent ) {
+        if (left->Parent->FirstData() == 30)
+            return left->Parent->HandleDeficiency();
+    }
+
+    // Handle if parent is root
+    if (this->Parent  && this->Parent->Parent == nullptr) {
+
     }
 }
 
@@ -448,89 +562,35 @@ Page* Page::Delete(Item* item) {
 // ----------------------------------
 BTreeN::BTreeN(int order, int data) {
     this->Order = order;
-    this->Root = new Page(order, data, NULL);
-    this->Root->Parent = NULL;
+    this->Root = new Page(order, data, nullptr);
+    this->Root->Parent = nullptr;
 }
 BTreeN::~BTreeN() {
     this->Order = 0;
-    if (this->Root != NULL)
+    if (this->Root )
         delete this->Root;
 }
 void BTreeN::Insert(int data) {
-    Item* newItem = new Item(data, NULL, NULL);
+    Item* newItem = new Item(data, nullptr, nullptr);
     Page* potentialPage = this->Root->SearchPotentialPage(data);
-    if (potentialPage == NULL) return;
+    if (potentialPage == nullptr) return;
     potentialPage->InsertToItems(newItem);
     potentialPage->CheckToBreak();
 }
+
 void BTreeN::Delete(int data) {
     SearchResult* sr = this->Root->Search(data, false);
     Item* item = sr->GetItem();
     
-    if (item == NULL) return;
+    if (item == nullptr) return;
     
     Page* page = item->WrapperPage->Delete(item);
     delete(item);
 
-    if (!page->IsDeficiency()) return;
-
-
+    page->HandleDeficiency();    
 }
 void BTreeN::Draw() {
     cout << "-------------------" << endl;
     this->Root->Draw(0);
 }
 
-int main () {
-    
-    printf("\n");
-    printf("\x1B[31mTexting\033[0m\t\t");
-    printf("\x1B[32mTexting\033[0m\t\t");
-    printf("\x1B[33mTexting\033[0m\t\t");
-    printf("\x1B[34mTexting\033[0m\t\t");
-    printf("\x1B[35mTexting\033[0m\n");
-    
-    printf("\x1B[36mTexting\033[0m\t\t");
-    printf("\x1B[36mTexting\033[0m\t\t");
-    printf("\x1B[36mTexting\033[0m\t\t");
-    printf("\x1B[37mTexting\033[0m\t\t");
-    printf("\x1B[93mTexting\033[0m\n");
-    
-    printf("\033[3;42;30mTexting\033[0m\t\t");
-    printf("\033[3;43;30mTexting\033[0m\t\t");
-    printf("\033[3;44;30mTexting\033[0m\t\t");
-    printf("\033[3;104;30mTexting\033[0m\t\t");
-    printf("\033[3;100;30mTexting\033[0m\n");
-
-    printf("\033[3;47;35mTexting\033[0m\t\t");
-    printf("\033[2;47;35mTexting\033[0m\t\t");
-    printf("\033[1;47;35mTexting\033[0m\t\t");
-    printf("\t\t");
-    printf("\n");
-
-
-    BTreeN* tree = new BTreeN(2, 20);
-    vector<int> vect{
-        20,
-        40, 10, 30, 15,
-        35, 7, 26, 18, 22,
-        5, 42, 13, 46, 27, 8, 32,
-        38, 24, 45, 25
-    };
-    for (int x: vect) {
-        tree->Insert(x);
-    }
-    tree->Draw();
-
-    tree->Delete(46);
-    tree->Delete(45);
-    
-    tree->Draw();
-    
-    // Page* p = new Page(2, 20, NULL);
-    // Item* newItem1 = p->Insert(new Item(30, NULL));
-    // Item* newItem2 = p->Insert(new Item(10, NULL));
-    // p->Draw(0);
-    // cout << newItem1->Data << "should be 30" << endl;
-    // cout << newItem2->Data << "should be 10" << endl;
-}

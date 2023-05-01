@@ -1,0 +1,270 @@
+#include <gtest/gtest.h>
+#include "btree.cpp"
+
+
+TEST(BTreeTest, GetSibling) {
+    BTreeN* tree = new BTreeN(2, 20);
+    ASSERT_TRUE(tree->Root != NULL);
+    
+    tree->Insert(20);
+    tree->Insert(40);
+    tree->Insert(10);
+    tree->Insert(30);
+    tree->Insert(15);
+    tree->Insert(35);
+    tree->Insert(7);
+    tree->Insert(26);
+    tree->Insert(18);
+    tree->Insert(22);
+    tree->Insert(5);
+    tree->Insert(42);
+    tree->Insert(13);
+    tree->Insert(46);
+    tree->Insert(27);
+    tree->Insert(8);
+    tree->Insert(32);
+    tree->Insert(38);
+    tree->Insert(24);
+    tree->Insert(45);
+    tree->Insert(25);
+
+    // Sibling of page contains 42 is page contains 32
+    Page* sibling;
+    SearchResult* sr;
+    sr = tree->Root->Search(42, false);
+    ASSERT_TRUE(sr->P != NULL);
+    sibling = sr->P->GetSibling();
+    ASSERT_TRUE(sibling == tree->Root->Search(32, false)->P);
+    
+    // Sibling of page contains 32 is page contains 42
+    sr = tree->Root->Search(32, false);
+    ASSERT_TRUE(sr->P != NULL);
+    sibling = sr->P->GetSibling();
+    ASSERT_TRUE(sibling == tree->Root->Search(42, false)->P);
+
+    // Sibling of page contains 27 is page contains 32
+    sr = tree->Root->Search(27, false);
+    ASSERT_TRUE(sr->P != NULL);
+    sibling = sr->P->GetSibling();
+    ASSERT_TRUE(sibling == tree->Root->Search(32, false)->P);
+
+    // Sibling of page contains 26 is page contains 35
+    sr = tree->Root->Search(26, false);
+    ASSERT_TRUE(sr->P != NULL);
+    sibling = sr->P->GetSibling();
+    ASSERT_TRUE(sibling == tree->Root->Search(35, false)->P);
+
+    // Sibling of page contains 38 is page contains 46
+    sr = tree->Root->Search(38, false);
+    ASSERT_TRUE(sr->P != NULL);
+    sibling = sr->P->GetSibling();
+    ASSERT_TRUE(sibling == tree->Root->Search(46, false)->P);
+
+    // Sibling of page contains 30 is page contains 20
+    sr = tree->Root->Search(30, false);
+    ASSERT_TRUE(sr->P != NULL);
+    sibling = sr->P->GetSibling();
+    ASSERT_TRUE(sibling == tree->Root->Search(20, false)->P);
+
+    // Sibling of page contains 10 is page contains 40
+    sr = tree->Root->Search(10, false);
+    ASSERT_TRUE(sr->P != NULL);
+    sibling = sr->P->GetSibling();
+    ASSERT_TRUE(sibling == tree->Root->Search(40, false)->P);
+
+    // Sibling of page contains 5 is page contains 13
+    sr = tree->Root->Search(5, false);
+    ASSERT_TRUE(sr->P != NULL);
+    sibling = sr->P->GetSibling();
+    ASSERT_TRUE(sibling == tree->Root->Search(13, false)->P);
+
+    // Sibling of page contains 13 is page contains 24
+    sr = tree->Root->Search(13, false);
+    ASSERT_TRUE(sr->P != NULL);
+    sibling = sr->P->GetSibling();
+    ASSERT_TRUE(sibling == tree->Root->Search(24, false)->P);
+
+    // Sibling of page contains 25 is NULL
+    sr = tree->Root->Search(25, false);
+    ASSERT_TRUE(sr->P != NULL);
+    sibling = sr->P->GetSibling();
+    ASSERT_TRUE(sibling == NULL);
+}
+
+TEST(BTreeTest, SimpleTree) {
+    BTreeN* tree = new BTreeN(2, 20);
+    ASSERT_TRUE(tree->Root != NULL);
+    
+    tree->Insert(20);
+    ASSERT_TRUE(tree->Root->Elems.size() == 1);
+    ASSERT_TRUE(tree->Root->Elems.at(0)->IsLeaf() == true);
+    tree->Insert(40);
+    ASSERT_TRUE(tree->Root->Elems.size() == 2);
+    ASSERT_TRUE(tree->Root->Elems.at(0)->IsLeaf() == true);
+    tree->Insert(10);
+    ASSERT_TRUE(tree->Root->Elems.size() == 3);
+    ASSERT_TRUE(tree->Root->Elems.at(0)->IsLeaf() == true);
+    tree->Insert(30);
+    ASSERT_TRUE(tree->Root->Elems.size() == 4);
+    ASSERT_TRUE(tree->Root->Elems.at(0)->IsLeaf() == true);
+    ASSERT_TRUE(tree->Root->Elems.at(1)->IsLeaf() == true);
+    ASSERT_TRUE(tree->Root->Elems.at(2)->IsLeaf() == true);
+    ASSERT_TRUE(tree->Root->Elems.at(3)->IsLeaf() == true);
+    tree->Insert(15);
+    ASSERT_TRUE(tree->Root->Elems.size() == 1);
+    ASSERT_TRUE(tree->Root->Elems.at(0)->Data == 20);
+    ASSERT_TRUE(tree->Root->Elems.at(0)->IsLeaf() == false);
+    ASSERT_TRUE(tree->Root->LeftPage != NULL);
+    ASSERT_TRUE(tree->Root->Elems.at(0)->RightPage != NULL);
+    tree->Insert(35);
+    tree->Insert(7);
+    tree->Insert(26);
+    tree->Insert(18);
+    tree->Insert(22);
+    tree->Insert(5);
+    tree->Insert(42);
+    tree->Insert(13);
+    tree->Insert(46);
+    tree->Insert(27);
+    tree->Insert(8);
+    tree->Insert(32);
+    tree->Insert(38);
+    tree->Insert(24);
+    tree->Insert(45);
+    tree->Insert(25);
+    ASSERT_TRUE(tree->Root->Elems.size() == 1);
+    ASSERT_TRUE(tree->Root->Elems.at(0)->Data == 25);
+    // check left of root
+    Page* rl = tree->Root->LeftPage;
+    ASSERT_TRUE(rl != NULL);
+    ASSERT_TRUE(rl->Parent == tree->Root);
+    ASSERT_TRUE(rl->Elems.size() == 2);
+    ASSERT_TRUE(rl->Elems.at(0)->Data == 10);
+    ASSERT_TRUE(rl->Elems.at(1)->Data == 20);
+
+    // check right of elem 0 of root
+    Page* r0 = tree->Root->Elems.at(0)->RightPage;
+    ASSERT_TRUE(r0 != NULL);
+    ASSERT_TRUE(r0->Parent == tree->Root);
+    ASSERT_TRUE(r0->Elems.size() == 2);
+    ASSERT_TRUE(r0->Elems.at(0)->Data == 30);
+    ASSERT_TRUE(r0->Elems.at(1)->Data == 40);
+
+    Page* rll = rl->LeftPage;
+    ASSERT_TRUE(rll != NULL);
+    ASSERT_TRUE(rll->Parent == rl);
+    ASSERT_TRUE(rll->Elems.size() == 3);
+    ASSERT_TRUE(rll->Elems.at(0)->Data == 5);
+    ASSERT_TRUE(rll->Elems.at(1)->Data == 7);
+    ASSERT_TRUE(rll->Elems.at(2)->Data == 8);
+    ASSERT_TRUE(rll->Elems.at(0)->RightPage == NULL);
+    ASSERT_TRUE(rll->Elems.at(1)->RightPage == NULL);
+    ASSERT_TRUE(rll->Elems.at(2)->RightPage == NULL);
+    ASSERT_TRUE(rll->Elems.at(0)->WrapperPage == rll);
+    ASSERT_TRUE(rll->Elems.at(1)->WrapperPage == rll);
+    ASSERT_TRUE(rll->Elems.at(2)->WrapperPage == rll);
+
+    Page* rl0r = rl->Elems.at(0)->RightPage;
+    ASSERT_TRUE(rl0r != NULL);
+    ASSERT_TRUE(rl0r->Parent == rl);
+    ASSERT_TRUE(rl0r->Elems.size() == 3);
+    ASSERT_TRUE(rl0r->Elems.at(0)->Data == 13);
+    ASSERT_TRUE(rl0r->Elems.at(1)->Data == 15);
+    ASSERT_TRUE(rl0r->Elems.at(2)->Data == 18);
+    ASSERT_TRUE(rl0r->Elems.at(0)->RightPage == NULL);
+    ASSERT_TRUE(rl0r->Elems.at(1)->RightPage == NULL);
+    ASSERT_TRUE(rl0r->Elems.at(2)->RightPage == NULL);
+    ASSERT_TRUE(rl0r->Elems.at(0)->WrapperPage == rl0r);
+    ASSERT_TRUE(rl0r->Elems.at(1)->WrapperPage == rl0r);
+    ASSERT_TRUE(rl0r->Elems.at(2)->WrapperPage == rl0r);
+
+    Page* rl1r = rl->Elems.at(1)->RightPage;
+    ASSERT_TRUE(rl1r != NULL);
+    ASSERT_TRUE(rl1r->Parent == rl);
+    ASSERT_TRUE(rl1r->Elems.size() == 2);
+    ASSERT_TRUE(rl1r->Elems.at(0)->Data == 22);
+    ASSERT_TRUE(rl1r->Elems.at(1)->Data == 24);
+    ASSERT_TRUE(rl1r->Elems.at(0)->RightPage == NULL);
+    ASSERT_TRUE(rl1r->Elems.at(1)->RightPage == NULL);
+    ASSERT_TRUE(rl1r->Elems.at(0)->WrapperPage == rl1r);
+    ASSERT_TRUE(rl1r->Elems.at(1)->WrapperPage == rl1r);
+
+    Page* rr = tree->Root->Elems.at(0)->RightPage;
+    ASSERT_TRUE(rr != NULL);
+    ASSERT_TRUE(rr->Elems.size() == 2);
+    ASSERT_TRUE(rr->Elems.at(0)->Data == 30);
+    ASSERT_TRUE(rr->Elems.at(1)->Data == 40);
+
+    Page* rrl = rr->LeftPage;
+    ASSERT_TRUE(rrl != NULL);
+    ASSERT_TRUE(rrl->Parent == rr);
+    ASSERT_TRUE(rrl->Elems.size() == 2);
+    ASSERT_TRUE(rrl->Elems.at(0)->Data == 26);
+    ASSERT_TRUE(rrl->Elems.at(1)->Data == 27);
+    ASSERT_TRUE(rrl->Elems.at(0)->RightPage == NULL);
+    ASSERT_TRUE(rrl->Elems.at(1)->RightPage == NULL);
+    ASSERT_TRUE(rrl->Elems.at(0)->WrapperPage == rrl);
+    ASSERT_TRUE(rrl->Elems.at(1)->WrapperPage == rrl);
+
+    Page* rr0r = rr->Elems.at(0)->RightPage;
+    ASSERT_TRUE(rr0r != NULL);
+    ASSERT_TRUE(rr0r->Parent == rr);
+    ASSERT_TRUE(rr0r->Elems.size() == 3);
+    ASSERT_TRUE(rr0r->Elems.at(0)->Data == 32);
+    ASSERT_TRUE(rr0r->Elems.at(1)->Data == 35);
+    ASSERT_TRUE(rr0r->Elems.at(2)->Data == 38);
+    ASSERT_TRUE(rr0r->Elems.at(0)->RightPage == NULL);
+    ASSERT_TRUE(rr0r->Elems.at(1)->RightPage == NULL);
+    ASSERT_TRUE(rr0r->Elems.at(2)->RightPage == NULL);
+    ASSERT_TRUE(rr0r->Elems.at(0)->WrapperPage == rr0r);
+    ASSERT_TRUE(rr0r->Elems.at(1)->WrapperPage == rr0r);
+    ASSERT_TRUE(rr0r->Elems.at(2)->WrapperPage == rr0r);
+
+    Page* rr1r = rr->Elems.at(1)->RightPage;
+    ASSERT_TRUE(rr1r != NULL);
+    ASSERT_TRUE(rr1r->Parent == rr);
+    ASSERT_TRUE(rr1r->Elems.size() == 3);
+    ASSERT_TRUE(rr1r->Elems.at(0)->Data == 42);
+    ASSERT_TRUE(rr1r->Elems.at(1)->Data == 45);
+    ASSERT_TRUE(rr1r->Elems.at(2)->Data == 46);
+    ASSERT_TRUE(rr1r->Elems.at(0)->RightPage == NULL);
+    ASSERT_TRUE(rr1r->Elems.at(1)->RightPage == NULL);
+    ASSERT_TRUE(rr1r->Elems.at(2)->RightPage == NULL);
+    ASSERT_TRUE(rr1r->Elems.at(0)->WrapperPage == rr1r);
+    ASSERT_TRUE(rr1r->Elems.at(1)->WrapperPage == rr1r);
+    ASSERT_TRUE(rr1r->Elems.at(2)->WrapperPage == rr1r);
+}
+
+TEST(BTreeTest, DeleteLeafItem) {
+    auto tree = make_unique<BTreeN>(2, 20);
+    ASSERT_TRUE(tree->Root != nullptr);
+
+    // Insert items
+    const std::array<int, 21> items = {20, 40, 10, 30, 15, 35, 7, 26, 18, 22, 5, 42, 13, 46, 27, 8, 32, 38, 24, 45, 25};
+    for (const auto& item : items) {
+        tree->Insert(item);
+    }
+
+    // Delete items
+    tree->Delete(46);
+    tree->Delete(45);
+
+    // Check expected results
+    ASSERT_EQ(tree->Root->Elems.at(0)->RightPage->Elems.at(1)->Data, 38);
+    ASSERT_EQ(tree->Root->Elems.at(0)->RightPage->Elems.at(1)->RightPage->Elems.at(0)->Data, 40);
+    ASSERT_EQ(tree->Root->Elems.at(0)->RightPage->Elems.at(1)->RightPage->Elems.at(1)->Data, 42);
+    ASSERT_EQ(tree->Root->Elems.at(0)->RightPage->Elems.at(0)->RightPage->Elems.at(0)->Data, 32);
+    ASSERT_EQ(tree->Root->Elems.at(0)->RightPage->Elems.at(0)->RightPage->Elems.at(1)->Data, 35);
+
+    // Check sibling of page containing 30 is page containing 20
+    SearchResult* sr = tree->Root->Search(30, false);
+    ASSERT_TRUE(sr->P != nullptr);
+    Page* sibling = sr->P->GetSibling();
+    ASSERT_TRUE(sibling == tree->Root->Search(20, false)->P);
+
+    // Print tree for visualization
+    tree->Draw();
+}
+
+
+// Delete item - NON leaf
