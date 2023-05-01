@@ -261,10 +261,111 @@ TEST(BTreeTest, DeleteLeafItem) {
     ASSERT_TRUE(sr->P != nullptr);
     Page* sibling = sr->P->GetSibling();
     ASSERT_TRUE(sibling == tree->Root->Search(20, false)->P);
+    tree->Draw();
 
-    // Print tree for visualization
+    tree->Delete(35);
+    ASSERT_EQ(tree->Root->Elems.size(), 4);
+    ASSERT_EQ(tree->Root->Elems.at(3)->RightPage->Parent, tree->Root);
     tree->Draw();
 }
 
 
-// Delete item - NON leaf
+TEST(BTreeTest, DeleteNonLeafItem) {
+    auto tree = make_unique<BTreeN>(2, 20);
+    ASSERT_TRUE(tree->Root != nullptr);
+
+    // Insert items
+    const std::array<int, 21> items = {20, 40, 10, 30, 15, 35, 7, 26, 18, 22, 5, 42, 13, 46, 27, 8, 32, 38, 24, 45, 25};
+    for (const auto& item : items) {
+        tree->Insert(item);
+    }
+    
+    cout << "try to delete 25" << endl;
+    tree->Delete(25);
+    tree->Draw();
+    ASSERT_EQ(tree->Root->Elems.size(), 1);
+    ASSERT_EQ(tree->Root->LeftPage->Elems.size(), 2);
+    ASSERT_EQ(tree->Root->LeftPage->Elems.at(0)->Data, 10);
+    ASSERT_EQ(tree->Root->LeftPage->Elems.at(1)->Data, 18);
+    ASSERT_EQ(tree->Root->LeftPage->Elems.at(1)->RightPage->Elems.size(), 2);
+    ASSERT_EQ(tree->Root->LeftPage->Elems.at(1)->RightPage->Elems.at(0)->Data, 20);
+    ASSERT_EQ(tree->Root->LeftPage->Elems.at(1)->RightPage->Elems.at(1)->Data, 22);
+    ASSERT_EQ(tree->Root->Elems.at(0)->RightPage->Elems.size(), 2);
+    ASSERT_EQ(tree->Root->Elems.at(0)->RightPage->Elems.at(0)->Data, 30);
+    ASSERT_EQ(tree->Root->Elems.at(0)->RightPage->Elems.at(0)->RightPage->Elems.at(0)->Data, 32);
+    ASSERT_EQ(tree->Root->Elems.at(0)->RightPage->Elems.at(0)->RightPage->Elems.at(1)->Data, 35);
+    ASSERT_EQ(tree->Root->Elems.at(0)->RightPage->Elems.at(0)->RightPage->Elems.at(2)->Data, 38);
+    ASSERT_EQ(tree->Root->Elems.at(0)->RightPage->Elems.at(1)->Data, 40);
+    ASSERT_EQ(tree->Root->Elems.at(0)->RightPage->Elems.at(1)->RightPage->Elems.at(0)->Data, 42);
+    ASSERT_EQ(tree->Root->Elems.at(0)->RightPage->Elems.at(1)->RightPage->Elems.at(1)->Data, 45);
+    ASSERT_EQ(tree->Root->Elems.at(0)->RightPage->Elems.at(1)->RightPage->Elems.at(2)->Data, 46);
+
+    tree->Delete(45);
+    tree->Delete(24);
+    tree->Draw();
+    ASSERT_EQ(tree->Root->Elems.size(), 4);
+
+    tree->Delete(38);
+    tree->Delete(32);
+    tree->Draw();
+    ASSERT_EQ(tree->Root->Elems.size(), 3);
+    ASSERT_EQ(tree->Root->Elems.at(2)->Data, 30);
+    ASSERT_EQ(tree->Root->Elems.at(2)->RightPage->Elems.size(), 4);
+
+    tree->Delete(8);
+    tree->Delete(27);
+    ASSERT_EQ(tree->Root->Elems.size(), 3);
+    ASSERT_EQ(tree->Root->Elems.at(2)->Data, 35);
+    ASSERT_EQ(tree->Root->Elems.at(2)->RightPage->Elems.size(), 3);
+    tree->Draw();
+
+    tree->Delete(46);
+    tree->Delete(13);
+    tree->Delete(42);
+    ASSERT_EQ(tree->Root->Elems.size(), 2);
+    ASSERT_EQ(tree->Root->Elems.at(1)->Data, 22);
+    ASSERT_EQ(tree->Root->Elems.at(1)->RightPage->Elems.size(), 4);
+    tree->Draw();
+
+    tree->Delete(5);
+    tree->Delete(22);
+    ASSERT_EQ(tree->Root->Elems.size(), 2);
+    ASSERT_EQ(tree->Root->Elems.at(0)->Data, 15);
+    ASSERT_EQ(tree->Root->Elems.at(1)->Data, 26);
+    ASSERT_EQ(tree->Root->Elems.at(1)->RightPage->Elems.size(), 3);
+    tree->Draw();
+
+    tree->Delete(18);
+    tree->Delete(26);
+    ASSERT_EQ(tree->Root->Elems.size(), 1);
+    ASSERT_EQ(tree->Root->Elems.at(0)->Data, 15);
+    ASSERT_EQ(tree->Root->Elems.at(0)->RightPage->Elems.size(), 4);
+    tree->Draw();
+
+    tree->Delete(7);
+    tree->Delete(35);
+    ASSERT_EQ(tree->Root->Elems.size(), 1);
+    ASSERT_EQ(tree->Root->Elems.at(0)->Data, 20);
+    ASSERT_EQ(tree->Root->Elems.at(0)->RightPage->Elems.size(), 2);
+    tree->Draw();
+
+    tree->Delete(15);
+    ASSERT_EQ(tree->Root->Elems.size(), 4);
+    ASSERT_EQ(tree->Root->Elems.at(0)->Data, 10);
+    ASSERT_EQ(tree->Root->Elems.at(0)->RightPage, nullptr);
+    tree->Draw();
+
+    tree->Delete(10);
+    tree->Delete(20);
+    tree->Delete(30);
+    tree->Delete(40);
+    ASSERT_EQ(tree->Root->Elems.size(), 0);
+    tree->Draw();
+
+    cout << "continue deleting" << endl;
+    tree->Delete(70);
+    tree->Draw();
+
+    // tree->Insert(1000);
+    // tree->Draw();
+}
