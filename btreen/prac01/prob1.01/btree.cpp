@@ -162,20 +162,13 @@ void Page::SetLeftPage(Page* page) {
     page->Parent = this;
 }
 void Page::SearchToAssignPage(Page* page) {
-    // cout << "first data: " << this->FirstData() << endl;
-    // cout << "last  data: " << page->LastData() << endl;
-
     if (page->LastData() < this->FirstData()) {
         this->SetLeftPage(page);
         return;
     }
 
-    // cout << "elems size: " << this->Elems.size() << endl;
     for (int i=0; i<this->Elems.size(); i++) {
         if (page->LastData() > this->Elems.at(i)->Data) {
-            // cout << "** elem data: " << this->Elems.at(i)->Data << endl;
-            // cout << "   last data: " << page->LastData() << endl;
-            // cout << "continue" << endl;
             continue;
         }
         
@@ -188,38 +181,10 @@ bool Page::IsDeficiency() {
     return this->Elems.size() < this->Order;
 }
 void Page::migrateNonRootPage(Page* left, Item* middleItem, Page* right) {
-    assert(this->Parent );
-
-    // cout << "Draw relative Parent" << endl;
-    // this->Parent->DebugItems();
-    // cout << "====================" << endl;
-
-    // cout << "\n\n====================" << endl;
-    // cout << "middle_item.data              : " << middleItem->Data << endl;
-    // cout << "middle_item.right_page.elem[0]: " << middleItem->RightPage->Elems.at(0)->Data << endl;
-    // cout << "middle_item.right_page.parent : " << middleItem->RightPage->Parent->FirstData() << endl;
-
     Item* parentItem = this->Parent->InsertToItems(middleItem);
-    
-    assert(left->Elems.size() == 2);
-    assert(right->Elems.size() == 2 || right->Elems.size() == 3);
-
-    // cout << "parent_item.data              : " << parentItem->Data << endl;
-    // cout << "parent_item.right_page.elem[0]: " << parentItem->RightPage->Elems.at(0)->Data << endl;
-    // cout << "parent_item.right_page.parent : " << parentItem->RightPage->Parent->FirstData() << endl;
-    // cout << "====================\n\n" << endl;
-    
     parentItem->RightPage = right;
     right->Parent = this->Parent;
-
-    assert(right->Elems.size() == 2 || right->Elems.size() == 3);
-    assert(left->Elems.size() == 2);
-
-    // cout << "left  "; left->DebugItems();
-    // cout << "right "; right->DebugItems();
-
     this->Parent->SearchToAssignPage(left);
-
     this->Parent->CheckToBreak();
 }
 void Page::Break() {
@@ -241,9 +206,6 @@ void Page::Break() {
         this->Elems.end()
     );
 
-
-    cout << "left:  "; left->DebugItems();
-    cout << "right: "; right->DebugItems();
 
     for (const auto& item : left->Elems) {
         item->WrapperPage = left;
@@ -290,34 +252,16 @@ void Page::Break() {
     }
     // new RightPage of middle item will be the "right"
     middleItem->RightPage = right;
-    // ====================================
     
 
     if (this->Parent == nullptr) {
-        // cout << "migrate root" << endl;
         this->migrateRootPage(left, middleItem, right);
         return;
     }
 
-    // cout << "migrate non root" << endl;
-    // cout << "left" << endl;
-    // left->Draw(0);
-    // cout << "middle" << endl;
-    // middleItem->Draw(0);
-    // cout << "right" << endl;
-    // right->Draw(0);
-    
-    // cout << endl;
-    // cout << "middle_item.data              : " << middleItem->Data << endl;
-    // cout << "middle_item.right_page.elem[0]: " << middleItem->RightPage->Elems.at(0)->Data << endl;
-    // cout << "middle_item.right_page.parent : " << middleItem->RightPage->Parent->FirstData() << endl;
-    // cout << endl;
-    
     this->migrateNonRootPage(left, middleItem, right);
 }
 void Page::CheckToBreak() {
-    cout << "######### check to break" << endl;
-    this->DebugItems();
     if (this->Elems.size() > 2*this->Order) {
         this->Break();
     }
@@ -554,44 +498,23 @@ Page* Page::HandleDeficiency() {
         right = sibling;
     }
 
-    cout << "-----------------------------------------)))))))" << endl;
-    left->DebugItems();
-    right->DebugItems();
-    
     right->MergeTo(left);
-    cout << "-----------------------------------------)))))))" << endl;
-
+    
     for (auto& item : left->Elems)
         if (item->RightPage) item->RightPage->Parent = left;
 
-    cout << "Page::new left after merge: ";
-    left->DebugItems();
-
     left->CheckToBreak();
 
-    cout << "left after check to break   ";
-    left->DebugItems();
     
     if (left->Parent) {
         if (left->Parent->Parent == nullptr) {
-            cout << "parrent items ++: ";
-            left->Parent->DebugItems();
-
             if (left->Parent->Elems.size() == 0) {
-                cout << "set parrent to root" << endl;
                 left->Parent = nullptr;
                 return left;
             }
         }
 
-        cout << "Page::HandleDeficiency() left->Parent is NOT NULL: ";
-        left->Parent->DebugItems();
-        
-        // if (left->Parent->FirstData() == 30) {
-        //     cout << "Page::HandleDeficiency() left->Parent->FirstData() == 30 ";
-        cout << "Page::HandleDeficiency() continue on parent level" << endl;
         return left->Parent->HandleDeficiency();
-        // }
     }
 
     throw runtime_error("BTreeN::Delete: left sibling is NULL after merge and break!!!");
@@ -612,12 +535,7 @@ BTreeN::~BTreeN() {
 }
 void BTreeN::Insert(int data) {
     auto newItem = new Item(data, nullptr, nullptr);
-    
     auto potentialPage = this->Root->SearchPotentialPage(data);
-    
-    cout << "here" << endl;
-
-    
     if (potentialPage == nullptr) return;
     potentialPage->InsertToItems(newItem);
     potentialPage->CheckToBreak();
@@ -646,12 +564,10 @@ SearchResult* BTreeN::SearchLeftNeighborOfItem(Item* item) {
 }
 
 void BTreeN::DeleteLeaf(Item* item) {
-    cout << "BTreeN::Delete() item is leaf" << endl;
     auto page = item->WrapperPage->Delete(item);
     delete(item);
     auto newRoot = page->HandleDeficiency();
     if (newRoot) {
-        cout << "trying to set new root" << endl;
         this->Root = newRoot;
     }
     return;
@@ -663,10 +579,7 @@ void BTreeN::DeleteNonLeaf(Item* item) {
     auto sr1 = this->SearchLeftNeighborOfItem(item);
     if (sr1 == nullptr) {
         if (item->WrapperPage->LeftPage == nullptr) {
-            cout << "============================================" << endl;
-            cout << "Vậy thì đành kiếm bên phải rồi thay thế thôi" << endl;
-            cout << "============================================" << endl;
-            return;
+            throw std::runtime_error("BTreeN::DeleteNonLeaf: invalid BTree");
         }
 
         // so, get last item of left page
@@ -694,12 +607,10 @@ void BTreeN::DeleteNonLeaf(Item* item) {
     return;
 }
 void BTreeN::Delete(int data) {
-    cout << this->Root << endl;
     auto sr0 = this->Root->Search(data, false);
     if (sr0 == nullptr) return;
     
-    cout << "sr0 is not null" << endl;
-
+    
     auto item = sr0->GetItem();
     if (item == nullptr) return;
     
@@ -711,4 +622,3 @@ void BTreeN::Draw() {
     cout << "-------------------" << endl;
     this->Root->Draw(0);
 }
-

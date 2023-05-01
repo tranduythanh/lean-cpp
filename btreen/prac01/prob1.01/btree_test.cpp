@@ -362,7 +362,6 @@ TEST(BTreeTest, DeleteNonLeafItem) {
     ASSERT_EQ(tree->Root->Elems.size(), 0);
     tree->Draw();
 
-    cout << "continue deleting" << endl;
     tree->Delete(70);
     ASSERT_EQ(tree->Root->Elems.size(), 0);
     tree->Draw();
