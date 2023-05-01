@@ -424,11 +424,14 @@ void Page::Draw(int level) const {
 
     if (debug) {
         cout << string((level + 1)*3, '\t');
-        cout << "  | left  : " << "\x1b[32m" << this->LeftPage << "\033[0m" << endl;
+        cout << "  | left  : "  << "\x1b[32m"    
+                                << this->LeftPage << "\033[0m" << endl;
         cout << string((level + 1)*3, '\t');
-        cout << "  | parent: " << "\x1b[32m" << this->Parent << "\033[0m" << endl;
+        cout << "  | parent: "  << "\x1b[32m" 
+                                << this->Parent << "\033[0m" << endl;
         cout << string((level + 1)*3, '\t');
-        cout << "  | this  : " << "\x1b[32m" << this << "\033[0m" << endl;
+        cout << "  | this  : "  << "\x1b[32m" 
+                                << this << "\033[0m" << endl;
     }
 
         // Traverse the items of the page
@@ -438,7 +441,8 @@ void Page::Draw(int level) const {
 
         // Print a horizontal line at the end of each level
         if (&item == &this->Elems.back()) {
-            std::cout << string((level+1) * 3, '\t') << "--" << '\n';
+            std::cout   << string((level+1) * 3, '\t') 
+                        << "--" << '\n';
         }
 
         // Recursively draw the right page of the current item
@@ -475,7 +479,11 @@ int Page::LastData() {
 // and returns a pointer to the new item.
 Item* Page::InsertToItems(Item* newItem) {
     newItem->WrapperPage = this;
-    auto it = std::lower_bound(Elems.begin(), Elems.end(), newItem, [](Item* a, Item* b) { return a->Data < b->Data; });
+    auto it = std::lower_bound(
+        Elems.begin(), Elems.end(), 
+        newItem, 
+        [](Item* a, Item* b) { return a->Data < b->Data; }
+    );
     if (it != Elems.end() && (*it)->Data == newItem->Data) {
         (*it)->Freq++;
         return *it;
@@ -621,7 +629,8 @@ Page* Page::HandleDeficiency() {
     if (this->Parent == nullptr) return nullptr;
 
     auto sibling = this->GetSibling();
-    if (sibling == nullptr) throw runtime_error("BTreeN::Delete: No sibling");
+    if (sibling == nullptr) 
+        throw runtime_error("BTreeN::Delete: No sibling");
 
     auto left = sibling;
     auto right = this;
@@ -650,7 +659,9 @@ Page* Page::HandleDeficiency() {
         return left->Parent->HandleDeficiency();
     }
 
-    throw runtime_error("BTreeN::Delete: left sibling is NULL after merge and break!!!");
+    throw runtime_error(
+        "BTreeN::Delete: left sibling is NULL after merge and break!!!");
+        
     return nullptr;
 }
 
