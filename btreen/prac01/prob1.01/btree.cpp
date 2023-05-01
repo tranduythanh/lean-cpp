@@ -33,7 +33,6 @@ class Page {
 private:
     void migrateRootPage(Page* left, Item* middleItem, Page* right);
     void migrateNonRootPage(Page* left, Item* middleItem, Page* right);
-    void eraseItem(int data);
 
 public:
     int Order;
