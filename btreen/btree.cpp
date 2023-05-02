@@ -144,17 +144,17 @@ Page::~Page() {
         delete this->Elems[i];
 }
 
-// method migrates the root page to new pages 
-// when the root page is full. It takes three arguments 
+// Phương thức di chuyển trang "root" đến trang mới
+// khi trang "root" đã đầy. Nó nhận ba đối số
 // - left
 // - middleItem
 // - right
-// which are the pages to be assigned to the 
-// left, middle, and right of the root page, 
-// respectively. The method sets the middle item 
-// as the only element of the root page, sets the 
-// middle item's wrapper page to the root page, and 
-// sets the left and right pages of the middle item.
+// đó là các trang được gán cho
+// LeftPage, giữa và phải của trang gốc,
+// tương ứng. Phương thức đặt middleItem
+// là item duy nhất của trang root, đặt
+// trang bao bọc của mục giữa là trang gốc, và
+// đặt các trang bên trái và phải của mục ở giữa.
 void Page::migrateRootPage(Page* left, Item* middleItem, Page* right) {
     this->Elems.clear();
     this->Elems.push_back(middleItem);
@@ -163,52 +163,37 @@ void Page::migrateRootPage(Page* left, Item* middleItem, Page* right) {
     this->SetLeftPage(left);
 }
 
-// method sets the right page of an element in the 
-// current page. It takes two arguments - elemIdx 
-// and page - which are the index of the element 
-// and the page to be set as the right page of the 
-// element, respectively. The method sets the right 
-// page of the element at the specified index as the 
-// given page and sets the parent of the given page 
-// as the current page.
 void Page::SetRightPage(int elemIdx, Page* page) {
     this->Elems.at(elemIdx)->RightPage = page;
     page->Parent = this;
 }
 
-// method sets the left page of the current page. 
-// It takes one argument - page - which is the page 
-// to be set as the left page of the current page. 
-// The method sets the left page of the current page 
-// as the given page and sets the parent of the 
-// given page as the current page.
 void Page::SetLeftPage(Page* page) {
     this->LeftPage = page;
     page->Parent = this;
 }
 
-// This method searches for the correct position 
-// of page to be assigned to the current page's 
-// child pages. If page is less than the first 
-// element of the current page, then page is set 
-// as the left child of the current page. If page 
-// is greater than an element in the current page, 
-// then page is set as the right child of the 
-// previous element.
 void Page::SearchToAssignPage(Page* page) {
+    // dữ liệu nhỏ hơn cả Item đầu tiên trong Elems,
+    // vậy ta sẽ gán page làm LeftPage
     if (page->LastData() < this->FirstData()) {
         this->SetLeftPage(page);
         return;
     }
 
+    // Duyệt qua toàn bộ Item trong Elems và gán page
+    // làm RightPage của Item phù hợp
     for (int i=0; i<this->Elems.size(); i++) {
-        if (page->LastData() > this->Elems.at(i)->Data) {
+        if (page->LastData() > this->Elems.at(i)->Data)
             continue;
-        }
         
         this->SetRightPage(i-1, page);
         return;
     }
+
+    // Dữ liệu lớn hơn mọi Item trong Elems, vậy thì
+    // ta sẽ gán page làm RightPage của Item cuối cùng
+    // trong Elems
     this->SetRightPage(this->Elems.size()-1, page);
 }
 
@@ -218,12 +203,13 @@ bool Page::IsDeficiency() {
     return this->Elems.size() < this->Order;
 }
 
-// This method is called when the current page is not 
-// a root page and needs to be split into two pages. 
-// It creates a new item in the parent page containing 
-// middleItem and assigns the right page to it. Then it 
-// assigns left page to the correct position in the 
-// parent page.
+// Phương thức sẽ chèn middleItem vào Parent của
+// Page hiện tại, gán RightPage cho Item mới chèn vào.
+// Kiểm tra và gán left vào chỗ phù hợp trong Parent.
+// Tương tự, Sau khi chèn Item mới vào Parent thì Page
+// này cũng có thể xày ra tình huống tràn, do vậy mà ta
+// sẽ (đệ quy) kiểm tra để tách Page. Trường hợp tệ nhất,
+// sẽ gọi ngược lên tận root
 void Page::migrateNonRootPage(Page* left, Item* middleItem, Page* right) {
     Item* parentItem = this->Parent->InsertToItems(middleItem);
     parentItem->RightPage = right;
@@ -232,12 +218,13 @@ void Page::migrateNonRootPage(Page* left, Item* middleItem, Page* right) {
     this->Parent->CheckToBreak();
 }
 
-// This method is called when a page needs to be split 
-// into two pages. It creates two new pages, left and 
-// right, and copies half of the elements from the current 
-// page to each of them. It also delegates the 
-// middle element's right page to the left of the new 
-// right page.
+// Phương thức sẽ tách Page hiện tại làm 3 phần:
+// 1. Page mới tên là left, chứa nửa Item bên trái trong Elems
+// 2. Page mới tên là right, chứa nửa Item bên phải trong Elems
+// 3. Item mới tên là middleItem, chính là Item nằm chính giữa trong Elems
+// Ngoài ra:
+// - right sẽ thừa kế RightPage của middleItem, đặt làm LeftPage của mình
+// - toàn bộ right sẽ thành RightPage của middleItem
 void Page::Break() {
     auto left = new Page(this->Order, 0, this);
     auto right = new Page(this->Order, 0, this);
@@ -273,9 +260,8 @@ void Page::Break() {
     }
 
     auto middleItem = this->Elems.at(this->Order);
-
-    // Inheritance ========================
-    // "left" must be inherit the LeftPage of original page
+    
+    // "left" sẽ kế thừa LeftPage của Page hiện tại
     left->LeftPage = this->LeftPage;
     if (left->LeftPage) {
         left->LeftPage->Parent = left;
@@ -296,12 +282,15 @@ void Page::Break() {
     //    [ 10    20 ]    [ 30    40]
     //     |  |     |      |
     // [...]  [...] [...]  [26,27] 
-    // delegate the middle item's right page to the left of new right-page
+    // 
+    // "right" sẽ thừa kế RightPage của middleItem và
+    // đặt làm LeftPage của mình
     right->LeftPage = middleItem->RightPage;
     if (right->LeftPage) {
         right->LeftPage->Parent = right;
     }
-    // new RightPage of middle item will be the "right"
+
+    // RightPage của middleItem sẽ là "right"
     middleItem->RightPage = right;
     
 
@@ -313,54 +302,62 @@ void Page::Break() {
     this->migrateNonRootPage(left, middleItem, right);
 }
 
-// This method checks whether the current page needs 
-// to be split into two pages. If the number of elements 
-// in the page is greater than twice the order of the 
-// B-Tree, then it calls the Break method.
+// Nếu Page hiện tại có số lượng Item lớn hơn 2n thì
+// tiến hành tách Page này.
 void Page::CheckToBreak() {
     if (this->Elems.size() > 2*this->Order) {
         this->Break();
     }
 }
 
-// searches for a specific data value in the tree, 
-// and returns a pointer to a SearchResult object 
-// that contains a reference to the page that contains 
-// the data and the index of the item within that page.
+// tìm kiếm dữ liệu cho trước xem nó thuộc Item nào
+// và trà về thông tin của Item đó thông qua SearchResult
 SearchResult* Page::Search(int data, bool increase) {
     if (this->Elems.size() > 0 && data < this->FirstData()) {
+        // Nếu dữ liệu nhỏ hơn mọi Item trong Elems thì 
+        // tiếp tục tìm kiếm (đệ quy) trên LeftPage của 
+        // Page hiện tại
         if (this->LeftPage) {
-            // continue searching on the leff branch
             return this->LeftPage->Search(data, increase);
         }
+
+        // LeftPage không tồn tại, vậy ta sẽ trả ra nullptr
+        // để báo hiệu là không tìm được Item mong muốn
         return nullptr;
     }
 
+    // Page hiện tại không có Elems nào, khả năng cao đây 
+    // là root khi B-Cây mới khởi tạo. Ta dĩ nhiên sẽ trả
+    // nullptr để báo hiệu không tìm được Item mong muốn
     if (this->Elems.size() == 0) return nullptr;
 
-    // Check on every item
+    // Duyệt qua tất cả Item trong Elems.
     for (int i=0; i<this->Elems.size(); i++) {
         auto item = this->Elems.at(i);
 
-        // data is alreay in page
+        // Dữ liệu có tồn tại, ta trả về thông tin của Item
+        // chứa dữ liệu này
         if (data == item->Data) {
             if (increase) item->Freq++;
             return new SearchResult(this, i);
         }
 
-        // skip if data is larger than item
+        // Dữ liệu lớn hơn Item hiện tại, ta tiếp tục tìm
+        // kiếm trên Item kế tiếp trong Elems
         if (data > item->Data) 
             continue;
 
-        // Continue searching on the right branch of pre-item
+        // Dữ llieuej nhỏ hơn Item hiện tại, vậy ta tiếp tục
+        // tìm kiếm trên RightPage của Item liền trước
         auto preItem = this->Elems.at(i-1);
         if (preItem->RightPage ) {
             return preItem->RightPage->Search(data, increase);
         }
     }
     
-    // if data is larger than all items
-    // Continue searching on the right branch
+    // Nếu dữ liệu lớn hơn mọi Item trong Elems thì ta 
+    // tiếp tục tìm kiếm (đệ quy) trong RightPage của 
+    // Item này
     if (this->Elems.back()->RightPage ) {
         return this->Elems.back()->RightPage->Search(data, increase);
     }
@@ -368,45 +365,58 @@ SearchResult* Page::Search(int data, bool increase) {
     return nullptr;
 }
 
-//  is used to search for the page in which the data 
-// should be inserted or the page from which data should 
-// be removed. If the data is already in the tree, it returns 
-// the page that contains the data. If the data is not in 
-// the tree, it returns the leaf page where the data should 
-// be inserted.
+// Phương thức này cố gắng tìm kiếm Page tiềm năng mà
+// ta sẽ chèn thêm Item vào.
+// Nếu dữ liệu đã tồn tại trên Page này, thì ta trả
+// địa chỉ Page này về.
+// Nếu dữ liệu chưa tồn tại thì nó sẽ cố gắng tìm
+// một trang lá phù hợp và trả về địa chỉ của trang lá này
 Page* Page::SearchPotentialPage(int data) {
     if (this->Elems.size() > 0 && data < this->FirstData()) {
-        if (this->LeftPage) {
-            // continue searching on the leff branch
+        // Dữ liệu cần chèn có giá trị nhỏ hơn tất cả các
+        // Item đang có trên page này, do đó ta sẽ cố gắng
+        // tìm Page tiềm năng trên LeftPage
+        if (this->LeftPage)
             return this->LeftPage->SearchPotentialPage(data);
-        }
+
+        // LeftPage không tồn tại, thì Page hiện tại chính
+        // là Page tiềm năng
         return this;
     }
 
+    // Page này không có Item nào, khả năng cao đây chính là
+    // Page root khi mới khởi tạo (chưa có dữ liệu). Vậy đây
+    // chính là Page tiềm năng.
     if (this->Elems.size() == 0) return this;
 
-    // Check on every item
+    // Duyệt qua toàn bộ Item trong Page.
     for (int i=0; i<this->Elems.size(); i++) {
         auto item = this->Elems.at(i);
 
-        // data is alreay in page
+        // Dữ liệu đã tồn tại trên Page.
         if (data == item->Data) {
             return this;
         }
 
-        // skip if data is larger than item
+        // Dữ liệu lớn hơn Item hiện tại, vậy
+        // ta sẽ tiếp tục đối sánh với Item
+        // kế tiếp
         if (data > item->Data) 
             continue;
 
-        // Continue searching on the right branch of pre-item
+        // Dữ liệu nhỏ hơn Item hiện tại, vậy thì
+        // ta trở lui về Item liền trước, và tiếp
+        // tục tìm kiếm (đệ quy) Page tiềm năng
+        // trên RightPage của Item liền trước đó.
         auto preItem = this->Elems.at(i-1);
         if (preItem->RightPage ) {
             return preItem->RightPage->SearchPotentialPage(data);
         }
     }
     
-    // if data is larger than all items
-    // Continue searching on the right branch
+    // Dữ liệu lớn hơn tất cả Item trong Page.
+    // Ta sẽ tiếp tục tìm kiếm (đệ quy) Page
+    // tiềm năng trên RightPage của Item cuối cùng.
     if (this->Elems.back()->RightPage ) {
         return this->Elems.back()->RightPage->SearchPotentialPage(data);
     }
@@ -441,8 +451,8 @@ void Page::Draw(int level) const {
 
         // Print a horizontal line at the end of each level
         if (&item == &this->Elems.back()) {
-            std::cout   << string((level+1) * 3, '\t') 
-                        << "--" << '\n';
+            cout    << string((level+1) * 3, '\t') 
+                    << "--" << '\n';
         }
 
         // Recursively draw the right page of the current item
@@ -464,22 +474,22 @@ int Page::LastData() {
     return this->Elems.back()->Data;
 }
 
-// method inserts a new Item object into the Elems vector 
-// of the current Page object in a way that maintains the 
-// order of Data values in the vector. It first sets the 
-// WrapperPage attribute of the new item to the current 
-// page. It then uses the lower_bound function from the 
-// <algorithm> library to find the first position in the 
-// Elems vector where the new item's Data value could be 
-// inserted while preserving the order of the elements. 
-// If an element with the same Data value already exists, 
-// it increments the Freq attribute of that element and 
-// returns a pointer to that element. Otherwise, it inserts 
-// the new item at the position returned by lower_bound 
-// and returns a pointer to the new item.
+// Phương thức sẽ chèn Item mới vào vector Elems
+// của Page hiện tại theo cách giữ nguyên thứ tự
+// của các giá trị Data trong vector. Đầu tiên, 
+// nó đặt thuộc tính WrapperPage của Item mới là 
+// Page hiện tại. Sau đó, nó sử dụng hàm lower_bound 
+// từ thư viện <algorithm> để tìm vị trí đầu tiên
+// trong vector Elems mà giá trị Data của Item mới nên
+// chèn vào trong khi vẫn giữ nguyên thứ tự của Item 
+// trong Elems. Nếu 1 Item có cùng giá trị Data đã 
+// tồn tại, nó tăng giá trị thuộc tính Freq của Item 
+// đó và trả về một con trỏ đến Item đó. Ngược lại, 
+// nó chèn Item mới vào vị trí do lower_bound trả về
+// và trả về một con trỏ đến Item mới.
 Item* Page::InsertToItems(Item* newItem) {
     newItem->WrapperPage = this;
-    auto it = std::lower_bound(
+    auto it = lower_bound(
         Elems.begin(), Elems.end(), 
         newItem, 
         [](Item* a, Item* b) { return a->Data < b->Data; }
@@ -577,7 +587,7 @@ Page* Page::GetSibling() const {
 // If the item is found in the vector, it is 
 // erased, and the updated page is returned.
 Page* Page::Delete(Item* item) {
-    auto it = std::find(Elems.begin(), Elems.end(), item);
+    auto it = find(Elems.begin(), Elems.end(), item);
     if (it != Elems.end()) {
         Elems.erase(it);
     }
@@ -595,7 +605,7 @@ Page* Page::Delete(Item* item) {
 void Page::MergeTo(Page* leftSibling) {
     int parentItemIdx = this->GetParentItemIndex();
     if (parentItemIdx == -1) {
-        throw std::runtime_error("BTreeN::Delete: No parentItemIdx");
+        throw runtime_error("BTreeN::Delete: No parentItemIdx");
     }
     auto parentItem = this->Parent->Elems.at(parentItemIdx);
     
@@ -611,43 +621,44 @@ void Page::MergeTo(Page* leftSibling) {
     this->Parent->Delete(parentItem);
 }
 
-// method checks if the current page is deficient 
-// (i.e., has less than Order elements). If it is, 
-// it tries to borrow an item from its sibling or 
-// merge with a sibling. If a merge happens, the 
-// parent item is moved from the parent to the left 
-// sibling, and all the items from the current page 
-// are moved to the left sibling. The method then 
-// calls CheckToBreak() to check if the resulting 
-// page is still oversized and possibly breaks the 
-// page again. Finally, the method calls itself 
-// recursively on the parent's page, if necessary.
+
 Page* Page::HandleDeficiency() {
+    // Nếu Page hiện tại không cạn thì không cần xử lí gì luôn
     if (!this->IsDeficiency()) return nullptr;
 
-    // Skip if this page is root page
+    // Nếu không có Parent thì cũng chả cần phải xú lí Parent bị cạn
+    // làm gì nữa
     if (this->Parent == nullptr) return nullptr;
 
+    // Tìm Page ngang cấp là anh em của Page hiện tại
     auto sibling = this->GetSibling();
     if (sibling == nullptr) 
         throw runtime_error("BTreeN::Delete: No sibling");
 
+    // Page anh em ngang cấp có thể nằm bên trái hoặc phải,
+    // vậy nên để tiện thực thi các bước sau, ta sẽ kiểm tra
+    // và gán đúng vị trí vào 2 biến mới là left và right
     auto left = sibling;
     auto right = this;
-
     if (sibling->FirstData() > this->FirstData()) {
         left = this;
         right = sibling;
     }
 
+    // Tiến hành gộp Page right vào Page left. Nhớ là phải 
+    // cập nhật lại Parent của đống Item trong right sau khi
+    // gộp vào left
     right->MergeTo(left);
-    
     for (auto& item : left->Elems)
         if (item->RightPage) item->RightPage->Parent = left;
 
+    // Kiểm tra coi left có bị tràn hay không, nếu tràn thì 
+    // tiến hành tách
     left->CheckToBreak();
-
     
+    // Nế Parent của left mà là root thì ta sẽ gán kiểm tra
+    // và gán lại root cho đúng. Nếu không thì ta tiến hành
+    // kiểm tra (đệ quuy) và xử lí nếu Parent bị c
     if (left->Parent) {
         if (left->Parent->Parent == nullptr) {
             if (left->Parent->Elems.size() == 0) {
@@ -695,32 +706,24 @@ void BTreeN::Insert(int data) {
     potentialPage->CheckToBreak();
 }
 
-// method takes an item as input and recursively 
-// searches for the right-most element in its right 
-// child. The result is a SearchResult object that 
-// contains a pointer to the page containing the 
-// right-most element and the index of that element 
-// in the page's element vector.
 SearchResult* BTreeN::SearchMaxDataInBranchOfItem(Item* item) {
     if (item->RightPage) {
         auto newItem = item->RightPage->Elems.back();
         return this->SearchMaxDataInBranchOfItem(newItem);
     }
-    // this item is what we want
+    
+    // RightPage không tồn tại, vậy Item này chính là Item
+    // cần tìm, ta sẽ lợi dụng phương thức Search để 
+    // tìm kiếm chính nó trong WrapperPage và trả về 
+    // SearchResult mong muốn.
     return item->WrapperPage->Search(item->Data, false);
 }
 
-// method takes an item as input and searches for 
-// its left neighbor in the tree. If a left neighbor 
-// is found, a SearchResult object is returned that 
-// contains a pointer to the page containing the 
-// left neighbor and the index of that element in 
-// the page's element vector. If there is no left 
-// neighbor, nullptr is returned.
 SearchResult* BTreeN::SearchLeftNeighborOfItem(Item* item) {
     auto sr = this->Root->Search(item->Data, false);
     
-    // if there is an item left of this item, return it
+    // Nếu đây không phải Item đầu tiên trong Elems thì
+    // trả về Item liền trước nó.
     if (sr->ItemIdx > 0) {
         return new SearchResult{
             sr->P,
@@ -728,17 +731,11 @@ SearchResult* BTreeN::SearchLeftNeighborOfItem(Item* item) {
         };
     }
 
-    // well, there is no item left of this item
+    // Đây là Item đầu tiên trong Elems, nên chả có
+    // Item nào trước nó cả
     return nullptr;
 }
 
-// method takes an item as input, deletes the item 
-// from the tree using the Delete method of the 
-// item's wrapper page, and then calls the 
-// HandleDeficiency method of the page to handle 
-// any deficiencies that may arise due to the 
-// deletion. If the page becomes the new root of 
-// the tree, the Root pointer is updated accordingly.
 void BTreeN::DeleteLeaf(Item* item) {
     auto page = item->WrapperPage->Delete(item);
     delete(item);
@@ -749,58 +746,54 @@ void BTreeN::DeleteLeaf(Item* item) {
     return;
 }
 
-// method takes an item as input and performs 
-// a special deletion procedure for non-leaf nodes. 
-// It searches for the right-most element in the 
-// left child of the item using the 
-// SearchLeftNeighborOfItem and 
-// SearchMaxDataInBranchOfItem methods. The right-most 
-// element is then deleted using the DeleteLeaf 
-// method. Finally, the value of the deleted 
-// element is replaced with the value of the 
-// right-most element.
+// Phương thức sẽ tìm kiếm Item (gọi là B) có giá trị lớn nhất 
+// mà vẫn nhỏ hơn giá trị của Item cần xóa (gọi là A) thông qua 
+// SearchLeftNeighborOfItem và SearchMaxDataInBranchOfItem. 
+// Vì B là Leaf nên có thể xóa dễ dàng bằng phương thức DeleteLeaf
+// Cuối cùng, ta thay dữ liệu của A bằng dữ liệu của B.
 void BTreeN::DeleteNonLeaf(Item* item) {
     auto parent = item->WrapperPage->Parent;
 
-    // search for max item that less that current item
+    // Tìm kiếm Item liền trước Item hiện tại
     auto sr1 = this->SearchLeftNeighborOfItem(item);
     if (sr1 == nullptr) {
         if (item->WrapperPage->LeftPage == nullptr) {
-            throw std::runtime_error("BTreeN::DeleteNonLeaf: invalid BTree");
+            throw runtime_error("BTreeN::DeleteNonLeaf: invalid BTree");
         }
 
-        // so, get last item of left page
+        // Không có item nào liền trước Item hiện tại,
+        // vậy ta sẽ trả ra Item cuối cùng của LeftPage
+        // của Page hiện tại
         sr1 = new SearchResult{
             item->WrapperPage->LeftPage,
             int(item->WrapperPage->LeftPage->Elems.size()-1)
         };
     }
 
+    // Tìm Item có dữ liệu lớn nhất trong Page hiện tại và trong
+    // tất cả Page con cháu chắt chút chít... của nó
     auto sr2 = this->SearchMaxDataInBranchOfItem(sr1->GetItem());
     if (sr2 == nullptr) {
-        throw std::runtime_error("BTreeN::Delete: No max data in branch");
+        throw runtime_error("BTreeN::Delete: No max data in branch");
     }
 
-    // delete this max item. this item must be leaf,
-    // so deleting it is an easy job
+    // Xóa Item thế thân tìm được.
     auto maxLeftItem = sr2->GetItem();
     auto maxValue = maxLeftItem->Data;
     this->DeleteLeaf(maxLeftItem);
 
-    // replace value of current item by max item value
+    // lấy dữ liệu của Item thế thân làm dữ liệu của Item cần xóa
     item->Data = maxValue;
 
-    // handle special case: item is in root, and it is the only item
     return;
 }
 
-// method takes an integer value as input and 
-// first searches for an item in the tree with 
-// that value using the Search method of the root 
-// node. If the item is found and it is a leaf, 
-// the DeleteLeaf method is called to delete it. 
-// If the item is found and it is not a leaf, 
-// the DeleteNonLeaf method is called.
+// Ý tưởng:
+// - Tìm xem dữ liệu có tồn tại trên cây hay không.
+// - Nếu có thì tiến hành xóa Item tương ứng 
+//   với dữ liệu đó. Có 2 khả năng. Nếu  Item 
+//   là Leaf thì dễ, còn nếu không phải là 
+//   Leaf thì ta sẽ dùng một chút thủ thuật.
 void BTreeN::Delete(int data) {
     auto sr0 = this->Root->Search(data, false);
     if (sr0 == nullptr) return;
