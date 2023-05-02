@@ -582,10 +582,6 @@ Page* Page::GetSibling() const {
     return this->GetSiblingLeft();
 }
 
-// method deletes an item from the page's 
-// elements vector, given the item pointer. 
-// If the item is found in the vector, it is 
-// erased, and the updated page is returned.
 Page* Page::Delete(Item* item) {
     auto it = find(Elems.begin(), Elems.end(), item);
     if (it != Elems.end()) {
@@ -594,34 +590,44 @@ Page* Page::Delete(Item* item) {
     return this;
 }
 
-// method merges the current page with its 
-// left sibling page. The left sibling is 
-// passed as an argument, and the current page 
-// is merged to its left. The parent item that 
-// separates the two pages is moved from the 
-// current page to the left sibling. Then, all 
-// the items from the current page are moved 
-// to the left sibling.
+// Ý tưởng: gộp hết Item trong Elems của Page hiện tại vào Elems 
+// của Page anh em bên trái. Gộp luôn cả Item trên Parent, là 
+// Item nhận Page hiện tại làm RightPage, vào Elems của Page 
+// anh em bên trái của nó luôn.
 void Page::MergeTo(Page* leftSibling) {
+    // tìm Item (trên Parent) nhận Page tại làm RightPage
     int parentItemIdx = this->GetParentItemIndex();
     if (parentItemIdx == -1) {
         throw runtime_error("BTreeN::Delete: No parentItemIdx");
     }
     auto parentItem = this->Parent->Elems.at(parentItemIdx);
     
+    // Chèn parentItem vào Elems của Page anh em bên trái của
+    // Page hiện tại luôn
     parentItem->WrapperPage = leftSibling;
     parentItem->RightPage = this->LeftPage;
     leftSibling->InsertToItems(parentItem);
 
+    // Chèn tất cả Item trong Elems của Page hiện tại vào
+    // Page anh em bên trái của nó
     for (auto& item : this->Elems) {
         item->WrapperPage = leftSibling;
         leftSibling->InsertToItems(item);
     }
-    
+
     this->Parent->Delete(parentItem);
 }
 
 
+// Phương thức kiểm tra xem trang hiện tại có bị cạn hay không 
+// (tức là, có ít hơn $n$ phần tử). Nếu cạn, nó sẽ cố gắng mượn 
+// Item từ anh chị em ngang cấp của nó hoặc gộp với một anh chị em. 
+// Khi gộp, một Item của Parent được chuyển xuống cho anh chị em 
+// bên trái, và tất cả các Item từ Page hiện tại cũng chuyển qua 
+// cho anh chị em bên trái nốt. 
+// Gải thuật sẽ gọi CheckToBreak để kiểm tra xem Page kết quả có 
+// bị tràn hay không để tiến hành tách Page đó lần nữa. 
+// Cuối cùng, ta ta sẽ cho gọi đệ quy lên Parent nếu cần thiết.
 Page* Page::HandleDeficiency() {
     // Nếu Page hiện tại không cạn thì không cần xử lí gì luôn
     if (!this->IsDeficiency()) return nullptr;
@@ -689,15 +695,6 @@ BTreeN::~BTreeN() {
     if (this->Root ) delete this->Root;
 }
 
-// method takes an integer value and creates 
-// a new item with that value. It then searches 
-// for the potential page where the new item 
-// should be inserted using the SearchPotentialPage 
-// method of the root node. If a potential page is 
-// found, the new item is inserted into that page 
-// using the InsertToItems method. Finally, the 
-// CheckToBreak method of the potential page is 
-// called to check if the page needs to be split.
 void BTreeN::Insert(int data) {
     auto newItem = new Item(data, nullptr, nullptr);
     auto potentialPage = this->Root->SearchPotentialPage(data);
