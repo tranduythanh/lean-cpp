@@ -33,16 +33,6 @@ public:
     ~Item();
     bool IsLeaf();
     void Draw(int level);
-
-    // Overload the == operator to compare two Item objects
-    bool operator==(const Item<T>& other) const {
-        return Data == other.Data;
-    }
-
-    // Overload the < operator to compare two Item objects
-    bool operator<(const Item<T>& other) const {
-        return Data < other.Data;
-    }
 };
 
 template <typename T>
