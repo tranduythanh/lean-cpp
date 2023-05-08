@@ -3,7 +3,7 @@
 
 
 TEST(BTreeTest, GetSibling) {
-    auto tree = new BTreeN<int>(2, 20);
+    auto tree = new BTreeN<int>(2);
     ASSERT_TRUE(tree->Root != NULL);
     
     tree->Insert(20);
@@ -92,7 +92,7 @@ TEST(BTreeTest, GetSibling) {
 }
 
 TEST(BTreeTest, SimpleTree) {
-    auto tree = new BTreeN<int>(2, 20);
+    auto tree = new BTreeN<int>(2);
     ASSERT_TRUE(tree->Root != NULL);
     
     tree->Insert(20);
@@ -236,7 +236,7 @@ TEST(BTreeTest, SimpleTree) {
 }
 
 TEST(BTreeTest, DeleteLeafItem) {
-    auto tree = make_unique<BTreeN<int>>(2, 20);
+    auto tree = make_unique<BTreeN<int>>(2);
     ASSERT_TRUE(tree->Root != nullptr);
 
     // Insert items
@@ -271,7 +271,7 @@ TEST(BTreeTest, DeleteLeafItem) {
 
 
 TEST(BTreeTest, DeleteNonLeafItem) {
-    auto tree = make_unique<BTreeN<int>>(2, 20);
+    auto tree = make_unique<BTreeN<int>>(2);
     ASSERT_TRUE(tree->Root != nullptr);
 
     // Insert items
@@ -373,5 +373,36 @@ TEST(BTreeTest, DeleteNonLeafItem) {
     tree->Insert(5000);
     ASSERT_EQ(tree->Root->Elems.size(), 1);
     ASSERT_EQ(tree->Root->Elems.at(0)->Data, 3000);
+    tree->Draw();
+}
+
+
+TEST(BTreeTest, Prob1a) {
+    auto tree = make_unique<BTreeN<int>>(2);
+    // Insert items
+    const std::array<int, 14> items = {25, 17, 31, 42, 21, 19, 26, 33, 47, 44, 45, 43, 8, 9};
+    for (const auto& item : items) {
+        tree->Insert(item);
+    }
+    tree->Draw();
+}
+
+TEST(BTreeTest, Prob1b) {
+    auto tree = make_unique<BTreeN<int>>(2);
+    // Insert items
+    const std::array<int, 20> items = {20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1};
+    for (const auto& item : items) {
+        tree->Insert(item);
+    }
+    tree->Draw();
+}
+
+TEST(BTreeTest, Prob1c) {
+    auto tree = make_unique<BTreeN<string>>(2);
+    // Insert items
+    const std::array<string, 21> items = {"ca", "ea", "ba", "da", "bf", "df", "ah", "cg", "bi", "cc", "af", "eg", "bd", "ec", "ch", "ai", "dc", "di", "ce", "ef", "cf"};
+    for (const auto& item : items) {
+        tree->Insert(item);
+    }
     tree->Draw();
 }

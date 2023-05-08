@@ -8,7 +8,7 @@
 
 using namespace std;
 
-bool debug = true;
+bool debug = false;
 
 // forward declarations
 template <typename T>
@@ -29,7 +29,7 @@ public:
     Page<T>* WrapperPage;
     Page<T>* RightPage;
     int Freq;
-    Item(int data, Page<T>* rightPage, Page<T>* wrapperPage);
+    Item(T data, Page<T>* rightPage, Page<T>* wrapperPage);
     ~Item();
     bool IsLeaf();
     void Draw(int level);
@@ -47,10 +47,10 @@ public:
     vector<Item<T>*> Elems;
     Page<T>* Parent;
 
-    Page(int order, int data, Page<T>* parent);
+    Page(int order, T* data, Page<T>* parent);
     ~Page();
-    int FirstData();
-    int LastData();
+    T FirstData();
+    T LastData();
     bool IsDeficiency();
     Item<T>* InsertToItems(Item<T>* item);
     void SetRightPage(int elemIdx, Page<T>* page);
@@ -60,8 +60,8 @@ public:
     Page<T>* GetSiblingLeft() const;
     Page<T>* GetSibling() const;
     void MergeTo(Page<T>* leftSibling);
-    SearchResult<T>* Search(int data, bool increase);
-    Page<T>* SearchPotentialPage(int data);
+    SearchResult<T>* Search(T data, bool increase);
+    Page<T>* SearchPotentialPage(T data);
     void SearchToAssignPage(Page<T>* page);
     void Break();
     void CheckToBreak();
@@ -100,14 +100,14 @@ private:
 public:
     int Order;
     Page<T>* Root;
-    BTreeN(int order, int data);
+    BTreeN(int order);
     ~BTreeN();
-    void Insert(int data);
+    void Insert(T data);
     SearchResult<T>* SearchLeftNeighborOfItem(Item<T>* item);
     SearchResult<T>* SearchMaxDataInBranchOfItem(Item<T>* item);
     void DeleteLeaf(Item<T>* item);
     void DeleteNonLeaf(Item<T>* item);
-    void Delete(int data);
+    void Delete(T data);
     void Draw();
 };
 
@@ -115,7 +115,7 @@ public:
 // Implement methods
 // ==============================================================
 template <typename T>
-Item<T>::Item(int data, Page<T>* rightPage, Page<T>* wrapperPage) {
+Item<T>::Item(T data, Page<T>* rightPage, Page<T>* wrapperPage) {
     this->Data = data;
     this->Freq = 1;
     this->RightPage = rightPage;
@@ -148,11 +148,13 @@ void Item<T>::Draw(int level) {
 
 // ----------------------------------
 template <typename T>
-Page<T>::Page(int order, int data, Page<T>* parent) {
+Page<T>::Page(int order, T* data, Page<T>* parent) {
     this->Order = order;
     this->LeftPage = nullptr;
     this->Parent = parent;
-    this->Elems.push_back(new Item<T>(data, nullptr, this));
+    if (data!= nullptr) {
+        this->Elems.push_back(new Item<T>(*data, nullptr, this));
+    }
 }
 
 template <typename T>
@@ -253,8 +255,8 @@ void Page<T>::migrateNonRootPage(Page<T>* left, Item<T>* middleItem, Page<T>* ri
 // - toàn bộ right sẽ thành RightPage của middleItem
 template <typename T>
 void Page<T>::Break() {
-    auto left = new Page(this->Order, 0, this);
-    auto right = new Page(this->Order, 0, this);
+    auto left = new Page(this->Order, nullptr, this);
+    auto right = new Page(this->Order, nullptr, this);
 
     int leftN = this->Elems.size()/2;
     int rightN = leftN;
@@ -341,7 +343,7 @@ void Page<T>::CheckToBreak() {
 // tìm kiếm dữ liệu cho trước xem nó thuộc Item nào
 // và trà về thông tin của Item đó thông qua SearchResult
 template <typename T>
-SearchResult<T>* Page<T>::Search(int data, bool increase) {
+SearchResult<T>* Page<T>::Search(T data, bool increase) {
     if (this->Elems.size() > 0 && data < this->FirstData()) {
         // Nếu dữ liệu nhỏ hơn mọi Item trong Elems thì 
         // tiếp tục tìm kiếm (đệ quy) trên LeftPage của 
@@ -401,7 +403,7 @@ SearchResult<T>* Page<T>::Search(int data, bool increase) {
 // Nếu dữ liệu chưa tồn tại thì nó sẽ cố gắng tìm
 // một trang lá phù hợp và trả về địa chỉ của trang lá này
 template <typename T>
-Page<T>* Page<T>::SearchPotentialPage(int data) {
+Page<T>* Page<T>::SearchPotentialPage(T data) {
     if (this->Elems.size() > 0 && data < this->FirstData()) {
         // Dữ liệu cần chèn có giá trị nhỏ hơn tất cả các
         // Item đang có trên page này, do đó ta sẽ cố gắng
@@ -502,12 +504,12 @@ void Page<T>::DebugItems() {
 }
 
 template <typename T>
-int Page<T>::FirstData() {
+T Page<T>::FirstData() {
     return this->Elems.at(0)->Data;
 }
 
 template <typename T>
-int Page<T>::LastData() {
+T Page<T>::LastData() {
     return this->Elems.back()->Data;
 }
 
@@ -731,9 +733,9 @@ Page<T>* Page<T>::HandleDeficiency() {
 
 // ----------------------------------
 template <typename T>
-BTreeN<T>::BTreeN(int order, int data) {
+BTreeN<T>::BTreeN(int order) {
     this->Order = order;
-    this->Root = new Page<T>(order, data, nullptr);
+    this->Root = new Page<T>(order, nullptr, nullptr);
     this->Root->Parent = nullptr;
 }
 
@@ -744,7 +746,7 @@ BTreeN<T>::~BTreeN() {
 }
 
 template <typename T>
-void BTreeN<T>::Insert(int data) {
+void BTreeN<T>::Insert(T data) {
     auto newItem = new Item<T>(data, nullptr, nullptr);
     auto potentialPage = this->Root->SearchPotentialPage(data);
     if (potentialPage == nullptr) return;
@@ -845,7 +847,7 @@ void BTreeN<T>::DeleteNonLeaf(Item<T>* item) {
 //   là Leaf thì dễ, còn nếu không phải là 
 //   Leaf thì ta sẽ dùng một chút thủ thuật.
 template <typename T>
-void BTreeN<T>::Delete(int data) {
+void BTreeN<T>::Delete(T data) {
     auto sr0 = this->Root->Search(data, false);
     if (sr0 == nullptr) return;
     
