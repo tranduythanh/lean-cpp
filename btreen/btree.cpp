@@ -5,6 +5,8 @@
 #include <cstdio>
 #include <cassert>
 #include <stdexcept>
+#include <unistd.h>
+
 
 using namespace std;
 
@@ -108,6 +110,7 @@ public:
     void DeleteLeaf(Item<T>* item);
     void DeleteNonLeaf(Item<T>* item);
     void Delete(T data);
+    void Destroy();
     void Draw();
 };
 
@@ -804,8 +807,6 @@ void BTreeN<T>::DeleteLeaf(Item<T>* item) {
 // Cuối cùng, ta thay dữ liệu của A bằng dữ liệu của B.
 template <typename T>
 void BTreeN<T>::DeleteNonLeaf(Item<T>* item) {
-    auto parent = item->WrapperPage->Parent;
-
     // Tìm kiếm Item liền trước Item hiện tại
     auto sr1 = this->SearchLeftNeighborOfItem(item);
     if (sr1 == nullptr) {
@@ -861,7 +862,28 @@ void BTreeN<T>::Delete(T data) {
 }
 
 template <typename T>
+void BTreeN<T>::Destroy() {
+
+    unsigned int microseconds = 100000;
+    
+
+    for (;this->Root != nullptr;) {
+        if (this->Root->Elems.size() > 0) {
+            auto sr = this->SearchMaxDataInBranchOfItem(this->Root->Elems.back());
+            if (sr!= nullptr) {
+                this->DeleteLeaf(sr->GetItem());
+            }    
+        } else {
+            cout << "break" << endl;
+            break;
+        }
+        usleep(microseconds);
+        this->Draw();
+    }
+}
+
+template <typename T>
 void BTreeN<T>::Draw() {
     cout << "-------------------" << endl;
-    this->Root->Draw(0);
+    this->Root->Draw(-1);
 }

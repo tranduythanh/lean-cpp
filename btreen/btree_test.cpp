@@ -400,7 +400,9 @@ TEST(BTreeTest, Prob1b) {
 TEST(BTreeTest, Prob1c) {
     auto tree = make_unique<BTreeN<string>>(2);
     // Insert items
-    const std::array<string, 21> items = {"ca", "ea", "ba", "da", "bf", "df", "ah", "cg", "bi", "cc", "af", "eg", "bd", "ec", "ch", "ai", "dc", "di", "ce", "ef", "cf"};
+    const std::array<string, 21> items = {
+        "ca", "ea", "ba", "da", "bf", "df", "ah", "cg", "bi", "cc", "af", 
+        "eg", "bd", "ec", "ch", "ai", "dc", "di", "ce", "ef", "cf"};
     for (const auto& item : items) {
         tree->Insert(item);
     }
